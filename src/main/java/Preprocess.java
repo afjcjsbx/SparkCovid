@@ -17,7 +17,7 @@ public class Preprocess {
 
     public static void main(String[] args) {
 
-        String pathFileWeatherDescription = "hdfs://master:9870/dpc-covid19-ita-andamento-nazionale.csv";
+        String pathFileWeatherDescription = "hdfs://0.0.0.0.:54310/dpc-covid19-ita-andamento-nazionale.csv";
 
         //-------------------------------------------------------
 
