@@ -131,4 +131,14 @@ public class Covid1Data implements Serializable {
     public void setCasi_testati(int casi_testati) {
         this.casi_testati = casi_testati;
     }
+
+
+    @Override
+    public String toString() {
+        return "Covid1Data{" +
+                "data='" + data + '\'' +
+                ", dimessi_guariti=" + dimessi_guariti +
+                ", tamponi=" + tamponi +
+                '}';
+    }
 }
