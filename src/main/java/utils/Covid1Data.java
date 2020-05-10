@@ -17,22 +17,6 @@ public class Covid1Data {
     private int tamponi;
     private int casi_testati;
 
-    public Covid1Data(String data, String stato, int ricoverati_con_sintomi, int terapia_intensiva, int totale_ospedalizzati, int isolamento_domiciliare, int totale_positivi, int variazione_totale_positivi, int nuovi_positivi, int dimessi_guariti, int deceduti, int totale_casi, int tamponi, int casi_testati) {
-        this.data = data;
-        this.stato = stato;
-        this.ricoverati_con_sintomi = ricoverati_con_sintomi;
-        this.terapia_intensiva = terapia_intensiva;
-        this.totale_ospedalizzati = totale_ospedalizzati;
-        this.isolamento_domiciliare = isolamento_domiciliare;
-        this.totale_positivi = totale_positivi;
-        this.variazione_totale_positivi = variazione_totale_positivi;
-        this.nuovi_positivi = nuovi_positivi;
-        this.dimessi_guariti = dimessi_guariti;
-        this.deceduti = deceduti;
-        this.totale_casi = totale_casi;
-        this.tamponi = tamponi;
-        this.casi_testati = casi_testati;
-    }
 
     public String getData() {
         return data;
