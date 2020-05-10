@@ -18,6 +18,7 @@ import org.apache.spark.sql.functions;
 import scala.Tuple2;
 import utils.CSVReaderInJava;
 import utils.Covid1Data;
+import utils.DataParser;
 import utils.FileUtils;
 
 import java.io.*;
@@ -56,7 +57,7 @@ public class Preprocess {
         String[] firstLine = header.split(",",-1);
 
 
-    /*
+
         //get ther other lines of csv file
         long iParseFile = System.currentTimeMillis();
         JavaRDD<String> otherLines = input.filter(row -> !row.equals(header));
@@ -67,7 +68,7 @@ public class Preprocess {
         weeklyDate.collect();
 
 
-     */
+
 
         long fOperations = System.currentTimeMillis();
         sc.stop();

@@ -69,8 +69,7 @@ public class CSVReaderInJava {
         int casi_testati = Integer.parseInt(metadata[13]);
 
         // create and return book of this metadata
-        return new Covid1Data(d, stato, ricoverati_con_sintomi, terapia_intensiva, totale_ospedalizzati, isolamento_domiciliare, totale_positivi,
-                variazione_totale_positivi, nuovi_positivi, dimessi_guariti, deceduti, totale_casi, tamponi, casi_testati);
+        return null;
     }
 
 }

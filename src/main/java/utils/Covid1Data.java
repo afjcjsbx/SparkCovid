@@ -1,6 +1,8 @@
 package utils;
 
-public class Covid1Data {
+import java.io.Serializable;
+
+public class Covid1Data implements Serializable {
 
     private String data;
     private String stato;
