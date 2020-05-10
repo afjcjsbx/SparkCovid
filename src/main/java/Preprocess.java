@@ -3,16 +3,15 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
-import org.apache.spark.sql.sources.In;
 import scala.Tuple2;
-import scala.Tuple3;
 import utils.*;
 
 import java.io.*;
 import java.net.URISyntaxException;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 public class Preprocess {
 
@@ -33,6 +32,8 @@ public class Preprocess {
         SparkConf conf = new SparkConf()
                 .setMaster("local")
                 .setAppName("Hello World");
+        conf.set("spark.driver.bindAddress", "127.0.0.1");
+
         JavaSparkContext sc = new JavaSparkContext(conf);
 
         long iOperations = System.currentTimeMillis();
@@ -57,14 +58,58 @@ public class Preprocess {
         System.out.println("finalDate: " + finalDate);
 
         // Extract words within a tweet
-        JavaRDD<Tuple3<String, Integer, Integer>> datas =
-                weeklyDate.map(line -> new Tuple3<>(line.getData(), line.getDimessi_guariti(), line.getTamponi()));
+        JavaRDD<Tuple2<String, Integer>> datas =
+                weeklyDate.map(line -> new Tuple2<>(line.getData(), line.getDimessi_guariti()));
 
+
+        JavaRDD<String> d = sc.textFile("src/main/resources/dataset1.csv");
+
+        String header1 = d.first();
+        JavaRDD<String> rowRdd = d.filter(line -> !line.equals(header1) );
+
+
+
+        JavaPairRDD<String, Integer> dataPairRdd = rowRdd.mapToPair((String s) ->{
+            String[] arr = s.split(",");
+            String[] timestamp = arr[0].split("T");
+            return new Tuple2<String, Integer>(timestamp[0], Integer.parseInt(arr[8]));
+        });
+
+
+
+
+        JavaPairRDD<String, Integer> groupedRdd = dataPairRdd.mapToPair(new PairFunction<Tuple2<String, Integer>, String, Integer>() {
+            @Override
+            public Tuple2<String, Integer> call(Tuple2<String, Integer> sensorValueDay) throws Exception {
+
+                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+                Date date = df.parse(sensorValueDay._1());
+
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(date);
+                int week = cal.get(Calendar.WEEK_OF_YEAR);
+
+                return new Tuple2<String, Integer> (Integer.toString(week), sensorValueDay._2());
+            }
+        }).reduceByKey((x, y) -> (x + y) / 7);
 
         // collect RDD for printing
-        for(Tuple3<String, Integer, Integer> line:datas.collect()){
+        for(Tuple2<String, Integer> line:groupedRdd.collect()){
             System.out.println("* "+line);
         }
+        /*
+        .mapToPair((String s, Integer i) ->{
+            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+            Date date = df.parse(s);
+
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+            int week = cal.get(Calendar.WEEK_OF_YEAR);
+
+            return new Tuple2<String, Integer>(Integer.toString(week), i);
+        });
+         */
+
 
 
         long fOperations = System.currentTimeMillis();
