@@ -3,15 +3,15 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
 import scala.Tuple2;
 import utils.*;
 
 import java.io.*;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.*;
 
 public class Preprocess {
 
@@ -65,38 +65,104 @@ public class Preprocess {
         JavaRDD<String> d = sc.textFile("src/main/resources/dataset1.csv");
 
         String header1 = d.first();
-        JavaRDD<String> rowRdd = d.filter(line -> !line.equals(header1) );
+        JavaRDD<String> rowRdd = d.filter(line -> !line.equals(header1));
 
 
+        JavaPairRDD<String, Tuple2<Integer, Integer>> clickstreamRDD = rowRdd.mapToPair((String s) -> {
 
-        JavaPairRDD<String, Integer> dataPairRdd = rowRdd.mapToPair((String s) ->{
             String[] arr = s.split(",");
             String[] timestamp = arr[0].split("T");
-            return new Tuple2<String, Integer>(timestamp[0], Integer.parseInt(arr[8]));
+
+            int guariti = Integer.parseInt(arr[9]);
+
+            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+            Date date = df.parse(timestamp[0]);
+
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+
+            int initial_week = 9;
+            String week = Integer.toString(cal.get(Calendar.WEEK_OF_YEAR) - initial_week);
+            System.out.println("Tuple: " + week + " " + guariti);
+
+
+            return new Tuple2<String, Tuple2<Integer, Integer>>(week, new Tuple2(guariti, guariti));
+        }).reduceByKey(new Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>() {
+
+            /**
+             *
+             */
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Tuple2<Integer, Integer> call(Tuple2<Integer, Integer> tuple1, Tuple2<Integer, Integer> tuple2) throws Exception {
+
+                return new Tuple2(Math.max(tuple1._1(), tuple1._1()), Math.min(tuple2._1(), tuple2._2()));
+            }
+        });
+
+
+        class GetLength implements Function<Tuple2<String, Tuple2<Integer, Integer>>, Tuple2<String, Integer>> {
+            public Tuple2<String, Integer> call(Tuple2<String, Tuple2<Integer, Integer>> s) {
+                return new Tuple2<String, Integer>(s._1(), (s._2._2() - s._2()._1()) / 7);
+            }
+        }
+
+
+        JavaRDD<Tuple2<String, Integer>> values = clickstreamRDD.map(new GetLength());
+
+
+        for (Tuple2<String, Integer> line : values.collect()) {
+            System.out.println("* " + line);
+        }
+
+
+
+        /*
+        JavaPairRDD<String, Tuple2<Integer, Integer>> dataPairRdd = rowRdd.mapToPair((String s) ->{
+            String[] arr = s.split(",");
+            String[] timestamp = arr[0].split("T");
+            return new Tuple2<String, Tuple2<Integer, Integer>>(timestamp[0], new Tuple2<>(Integer.parseInt(arr[9]), Integer.parseInt(arr[12])));
         });
 
 
 
 
-        JavaPairRDD<String, Integer> groupedRdd = dataPairRdd.mapToPair(new PairFunction<Tuple2<String, Integer>, String, Integer>() {
+        JavaPairRDD<String, Tuple2<Integer, Integer>> groupedRdd = dataPairRdd.mapToPair(new PairFunction<Tuple2<String, Tuple2<Integer, Integer>>, String, Tuple2<Integer, Integer>>() {
+
             @Override
-            public Tuple2<String, Integer> call(Tuple2<String, Integer> sensorValueDay) throws Exception {
+            public Tuple2<String, Tuple2<Integer, Integer>> call(Tuple2<String, Tuple2<Integer, Integer>> stringTuple2Tuple2) throws Exception {
 
                 SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-                Date date = df.parse(sensorValueDay._1());
+                Date date = df.parse(stringTuple2Tuple2._1());
 
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(date);
                 int week = cal.get(Calendar.WEEK_OF_YEAR);
+                System.out.println("Tuple: " + week + " " + stringTuple2Tuple2._2()._1() + " " + stringTuple2Tuple2._2()._2());
 
-                return new Tuple2<String, Integer> (Integer.toString(week), sensorValueDay._2());
+                return new Tuple2<String, Tuple2<Integer, Integer>>(Integer.toString(week), new Tuple2(stringTuple2Tuple2._2()._1(), stringTuple2Tuple2._2()._2()));
             }
-        }).reduceByKey((x, y) -> (x + y) / 7);
+
+        });
+
+        JavaPairRDD<String, Tuple2<Integer, Integer>> reducedRdd = groupedRdd.reduceByKey(new Function2<Tuple2<String, Tuple2<Integer, Integer>>, Tuple2<String, Tuple2<Integer, Integer>>, Tuple2<Integer, Integer>>() {
+
+            @Override
+            public Tuple2<Integer, Integer> call(Tuple2<String, Tuple2<Integer, Integer>> t1, Tuple2<String, Tuple2<Integer, Integer>> t2) throws Exception {
+                int max_g = Math.max(t1._2()._1(), t1._2()._2());
+                int min_g = Math.min(t1._2()._1(), t1._2()._2());
+
+                return new Tuple2<Integer, Integer>(max_g, min_g);
+            }
+        });
+
+
+         */
+
 
         // collect RDD for printing
-        for(Tuple2<String, Integer> line:groupedRdd.collect()){
-            System.out.println("* "+line);
-        }
+
         /*
         .mapToPair((String s, Integer i) ->{
             SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
@@ -109,7 +175,6 @@ public class Preprocess {
             return new Tuple2<String, Integer>(Integer.toString(week), i);
         });
          */
-
 
 
         long fOperations = System.currentTimeMillis();
