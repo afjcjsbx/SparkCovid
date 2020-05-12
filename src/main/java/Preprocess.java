@@ -1,4 +1,5 @@
 
+import helpers.Common;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -65,14 +66,8 @@ public class Preprocess {
 
             int guariti = Integer.parseInt(arr[9]);
 
-            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-            Date date = df.parse(timestamp[0]);
-
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(date);
-
             int initial_week = 9;
-            String week = Integer.toString(cal.get(Calendar.WEEK_OF_YEAR) - initial_week);
+            String week = Integer.toString(Common.getWeekFrom(timestamp[0]) - initial_week);
             System.out.println("Tuple: " + week + " " + guariti);
 
 

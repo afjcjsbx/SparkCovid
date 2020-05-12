@@ -3,7 +3,6 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import utils.ConvertData;
-import utils.Covid1Data;
 import utils.DataParser;
 
 import java.io.IOException;
@@ -35,8 +34,8 @@ public class Query3 {
         //get ther other lines of csv file
         long iParseFile = System.currentTimeMillis();
         JavaRDD<String> otherLines = input.filter(row -> !row.equals(header));
-        JavaRDD<Covid2Data> weeklyDate = otherLines
-                .map(line -> DataParser.parseCSVcovid2data(line, num_of_days, firstLine));
+        //JavaRDD<Covid2Data> weeklyDate = otherLines
+          //      .map(line -> DataParser.parseCSVcovid2data(line, num_of_days, firstLine));
         long fParseFile = System.currentTimeMillis();
 
         String initialDate = firstLine[4];
@@ -46,8 +45,8 @@ public class Query3 {
         System.out.println("finalDate: " + finalDate);
 
         //Convert String to data format (m/gg/aa)
-        Date data_inizio = ConvertData.convert(initialDate);
-        Date data_fine = ConvertData.convert(finalDate);
+        //Date data_inizio = ConvertData.convert(initialDate);
+        //Date data_fine = ConvertData.convert(finalDate);
 
         /*
 

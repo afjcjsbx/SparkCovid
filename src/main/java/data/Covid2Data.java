@@ -1,52 +1,67 @@
 package data;
 
+import org.apache.spark.sql.sources.In;
+
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Covid2Data implements Serializable {
-    private String stato;
-    private String regione;
-    private Integer latitudine;
-    private Integer longitudine;
-    private ArrayList<Covid2DataInner> data;
 
-    public ArrayList<Covid2DataInner> getData() {
-        return data;
+    private String state;
+    private String country;
+    private double lat;
+    private double lng;
+    private List<Covid2DataInner> days;
+
+    public Covid2Data() {
+        this.days = new ArrayList<Covid2DataInner>() ;
     }
 
-    public void setData(ArrayList<Covid2DataInner> data) {
-        this.data = data;
+    public String getState() {
+        return state;
     }
 
-    public String getStato() {
-        return stato;
+    public void setState(String state) {
+        this.state = state;
     }
 
-    public void setStato(String stato) {
-        this.stato = stato;
+    public String getCountry() {
+        return country;
     }
 
-    public String getRegione() {
-        return regione;
+    public void setCountry(String country) {
+        this.country = country;
     }
 
-    public void setRegione(String regione) {
-        this.regione = regione;
+    public double getLat() {
+        return lat;
     }
 
-    public Integer getLatitudine() {
-        return latitudine;
+    public void setLat(double lat) {
+        this.lat = lat;
     }
 
-    public void setLatitudine(Integer latitudine) {
-        this.latitudine = latitudine;
+    public double getLng() {
+        return lng;
     }
 
-    public Integer getLongitudine() {
-        return longitudine;
+    public void setLng(double lng) {
+        this.lng = lng;
     }
 
-    public void setLongitudine(Integer longitudine) {
-        this.longitudine = longitudine;
+    public List<Covid2DataInner> getDays() {
+        return days;
+    }
+
+    @Override
+    public String toString() {
+        return "Covid2Data{" +
+                "state='" + state + '\'' +
+                ", country='" + country + '\'' +
+                ", lat=" + lat +
+                ", lng=" + lng +
+                ", days=" + days +
+                '}';
     }
 }

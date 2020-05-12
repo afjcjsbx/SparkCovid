@@ -5,6 +5,7 @@ import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
 
 import java.util.Arrays;
 
+/*
 public class Trend extends OSLTrendLine {
 
     protected double[] xVector(double x) { // {1, x, x*x, x*x*x, ...}
@@ -48,4 +49,7 @@ public class Trend extends OSLTrendLine {
         ols.newSampleData(y, xData); // provide the data to the model
         coef = MatrixUtils.createColumnRealMatrix(ols.estimateRegressionParameters()); // get our coefs
     }
+
+
 }
+*/

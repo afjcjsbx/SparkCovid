@@ -1,11 +1,17 @@
+import data.Covid2Data;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import scala.Tuple2;
 import utils.Covid1Data;
 import utils.DataParser;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 public class Query2 {
 
@@ -32,7 +38,6 @@ public class Query2 {
 
         long iOperations = System.currentTimeMillis();
 
-
         JavaRDD<String> input = sc.textFile("src/main/resources/dataset2.csv");
         String header = input.first();
         String[] firstLine = header.split(",", -1);
@@ -44,6 +49,22 @@ public class Query2 {
         long fParseFile = System.currentTimeMillis();
 
 
+        // Extract and parse tweet
+        JavaRDD<Covid2Data> countries =
+                rowRdd.map(line -> DataParser.parseCSVcovid2data(line, header));
+
+
+
+        for (Covid2Data mm : countries.collect()){
+            System.out.println(mm.toString());
+        }
+
+
+
+        long fOperations = System.currentTimeMillis();
+        sc.stop();
+        long finalTime = System.currentTimeMillis();
+        System.out.printf("Total time to complete: %s ms\n", Long.toString(finalTime - initialTime));
 
 
     }
