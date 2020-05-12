@@ -18,10 +18,11 @@ public class DataParser {
         cdata.setDimessi_guariti(Integer.parseInt(csvValues[8]));
         cdata.setTamponi(Integer.parseInt(csvValues[12]));
 
-            return cdata;
+        return cdata;
     }
 
     public static Covid2Data parseCSVcovid2data(String csvLine, Integer days, String[] header){
+
         String[] csvValues = csvLine.split(",", -1);
         ArrayList<Covid2DataInner> data = new ArrayList<>();
 
@@ -30,14 +31,16 @@ public class DataParser {
         cdata.setRegione(csvValues[1]);
         cdata.setLatitudine(Integer.parseInt(csvValues[2]));
         cdata.setLongitudine(Integer.parseInt(csvValues[3]));
+
         for (int i = 4; i < days; i++){
             Covid2DataInner futher_info = new Covid2DataInner();
             futher_info.setDay(header[i]);
             futher_info.setConfirmed_cases(Integer.parseInt(csvValues[i]));
             data.add(futher_info);
         }
+
         cdata.setData(data);
+
         return cdata;
     }
-
 }
