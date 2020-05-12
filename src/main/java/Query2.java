@@ -1,11 +1,14 @@
 import data.Covid2Data;
+import helpers.Common;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.PairFunction;
 import scala.Tuple2;
 import utils.Covid1Data;
 import utils.DataParser;
+import utils.LinearRegression;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -54,8 +57,32 @@ public class Query2 {
                 rowRdd.map(line -> DataParser.parseCSVcovid2data(line, header));
 
 
+        JavaPairRDD<String, Integer> clickstreamRDD = countries.mapToPair(new PairFunction<Covid2Data, String, Integer>() {
+            @Override
+            public Tuple2<String, Integer> call(Covid2Data covid2Data) throws Exception {
 
-        for (Covid2Data mm : countries.collect()){
+                    String key = covid2Data.getCountry();
+                    Integer value = covid2Data.getDays().iterator();
+
+                    return new Tuple2<String, Integer> (key, coefficient);
+            }
+        });
+
+
+            /*
+                  JavaPairRDD<String, Double> clickstreamRDD = countries.mapToPair(new PairFunction<Covid2Data, String, Double>() {
+            @Override
+            public Tuple2<String, Double> call(Covid2Data covid2Data) throws Exception {
+
+                    String key = covid2Data.getCountry();
+                    Double coefficient = new LinearRegression(covid2Data.getDays()).getCoefficient();
+
+                    return new Tuple2<String, Double> (key, coefficient);
+            }
+        });
+
+             */
+        for (Tuple2<String, Double> mm : clickstreamRDD.collect()){
             System.out.println(mm.toString());
         }
 
