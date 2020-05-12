@@ -51,16 +51,6 @@ public class Preprocess {
         long fParseFile = System.currentTimeMillis();
 
 
-        String initialDate = weeklyDate.first().getData();
-        String finalDate = weeklyDate.take((int) weeklyDate.count()).get(0).getData();
-
-        System.out.println("initialDate: " + initialDate);
-        System.out.println("finalDate: " + finalDate);
-
-        // Extract words within a tweet
-        JavaRDD<Tuple2<String, Integer>> datas =
-                weeklyDate.map(line -> new Tuple2<>(line.getData(), line.getDimessi_guariti()));
-
 
         JavaRDD<String> d = sc.textFile("src/main/resources/dataset1.csv");
 
