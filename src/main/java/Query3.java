@@ -36,8 +36,7 @@ public class Query3 {
         //get ther other lines of csv file
         long iParseFile = System.currentTimeMillis();
         JavaRDD<String> otherLines = input.filter(row -> !row.equals(header));
-        JavaRDD<Covid2Data> weeklyDate = otherLines
-                .map(line -> DataParser.parseCSVcovid2data(line, num_of_days, firstLine));
+        //JavaRDD<Covid2Data> weeklyDate = otherLines.map(line -> DataParser.parseCSVcovid2data(line, num_of_days, firstLine));
         long fParseFile = System.currentTimeMillis();
 
         String initialDate = firstLine[4];

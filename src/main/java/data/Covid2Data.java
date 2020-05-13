@@ -12,10 +12,10 @@ public class Covid2Data implements Serializable {
     private String country;
     private double lat;
     private double lng;
-    private List<Covid2DataInner> days;
+    private ArrayList<Integer> cases;
 
     public Covid2Data() {
-        this.days = new ArrayList<Covid2DataInner>() ;
+        this.cases = new ArrayList<>() ;
     }
 
     public String getState() {
@@ -50,8 +50,8 @@ public class Covid2Data implements Serializable {
         this.lng = lng;
     }
 
-    public List<Covid2DataInner> getDays() {
-        return days;
+    public ArrayList<Integer> getCases() {
+        return cases;
     }
 
     @Override
@@ -61,7 +61,7 @@ public class Covid2Data implements Serializable {
                 ", country='" + country + '\'' +
                 ", lat=" + lat +
                 ", lng=" + lng +
-                ", days=" + days +
+                ", days=" + cases +
                 '}';
     }
 }

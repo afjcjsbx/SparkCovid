@@ -1,8 +1,5 @@
 package utils;
 
-import data.Covid2Data;
-import data.Covid2DataInner;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,16 +27,12 @@ public class LinearRegression {
      *
      * @throws IllegalArgumentException if the lengths of the two arrays are not equal
      */
-    public LinearRegression(List<Covid2DataInner> c) {
+    public LinearRegression(List<Integer> y) {
         /*
         if (x.length != y.size()) {
             throw new IllegalArgumentException("array lengths are not equal");
         }
          */
-        List<Integer> y = new ArrayList<>();
-        for (int i = 0; i < c.size(); i++) {
-            y.add(c.get(i).getConfirmed_cases());
-        }
 
         int n = y.size();
 

@@ -1,9 +1,7 @@
 package utils;
 
 import data.Covid2Data;
-import data.Covid2DataInner;
 import enums.Continent;
-import org.graalvm.compiler.core.phases.EconomyHighTier;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -22,7 +20,7 @@ public class DataParser {
 
         Covid1Data cdata = new Covid1Data();
         cdata.setData(timestamp[0]);
-        cdata.setDimessi_guariti(Integer.parseInt(csvValues[8]));
+        cdata.setDimessi_guariti(Integer.parseInt(csvValues[9]));
         cdata.setTamponi(Integer.parseInt(csvValues[12]));
 
         return cdata;
@@ -39,16 +37,23 @@ public class DataParser {
         covid2Data.setLat(Double.parseDouble(data[2]));
         covid2Data.setLng(Double.parseDouble(data[3]));
 
-        String[] head = header.split(",");
+        ArrayList<Integer> cases = new ArrayList<>();
+        int n1, n2, res;
 
-
-        for(int i = 4; i < data.length; i++){
-            Covid2DataInner covid2DataInner = new Covid2DataInner();
-            covid2DataInner.setDay(head[i]);
-            covid2DataInner.setConfirmed_cases(Integer.parseInt(data[i]));
-
-            covid2Data.getDays().add(covid2DataInner);
+        for(int i = 4; i < data.length; i++) {
+            if (i == 4) {
+                cases.add(Integer.parseInt(data[i]));
+            } else {
+                n2 = Integer.parseInt(data[i]);
+                n1 = Integer.parseInt(data[(i - 1)]);
+                if (n2 < n1)
+                    res = 0;
+                else
+                    res = n2 - n1;
+                covid2Data.getCases().add(res);
+            }
         }
+
 
         return covid2Data;
     }

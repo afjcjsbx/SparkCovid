@@ -2,6 +2,7 @@ package helpers;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Month;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -33,6 +34,23 @@ public class Common {
             Date d = df.parse(date);
             calendar.setTime(d);
             return calendar.get(Calendar.WEEK_OF_YEAR);
+
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
+
+    public Integer getMonthFromDate(String date) {
+
+        SimpleDateFormat df = new SimpleDateFormat("MM/dd/yy");
+
+        try {
+            Date d = df.parse(date);
+            calendar.setTime(d);
+            return calendar.get(Calendar.MONTH);
 
         } catch (ParseException e) {
             e.printStackTrace();
