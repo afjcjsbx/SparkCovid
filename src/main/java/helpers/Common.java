@@ -25,5 +25,21 @@ public class Common {
         return -1;
     }
 
+    public static Integer getWeekFrom2(String date) {
+
+        SimpleDateFormat df = new SimpleDateFormat("MM/dd/yy");
+
+        try {
+            Date d = df.parse(date);
+            calendar.setTime(d);
+            return calendar.get(Calendar.WEEK_OF_YEAR);
+
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
 
 }

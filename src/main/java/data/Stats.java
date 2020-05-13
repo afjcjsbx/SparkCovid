@@ -6,10 +6,29 @@ public class Stats implements Serializable {
 
     private static int DAYS = 7;
 
+    private Integer min_confirmed_cases;
+    private Integer max_confirmed_cases;
     private Integer min_cured;
     private Integer max_cured;
     private Integer min_swabds;
     private Integer max_swabds;
+
+
+    public Integer getMin_confirmed_cases() {
+        return min_confirmed_cases;
+    }
+
+    public void setMin_confirmed_cases(Integer min_confirmed_cases) {
+        this.min_confirmed_cases = min_confirmed_cases;
+    }
+
+    public Integer getMax_confirmed_cases() {
+        return max_confirmed_cases;
+    }
+
+    public void setMax_confirmed_cases(Integer max_confirmed_cases) {
+        this.max_confirmed_cases = max_confirmed_cases;
+    }
 
     public Integer getMin_cured() {
         return min_cured;
@@ -52,5 +71,10 @@ public class Stats implements Serializable {
     public Double getAvg_cured() {
         return (double) (max_cured - min_cured) / DAYS;
     }
+
+    public Double getAvg_confirmed_cases() {
+        return (double) (max_confirmed_cases - min_confirmed_cases) / DAYS;
+    }
+
 
 }

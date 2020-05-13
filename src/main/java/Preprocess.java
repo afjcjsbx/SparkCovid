@@ -8,7 +8,9 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.util.StatCounter;
 import scala.Tuple2;
+import scala.Tuple3;
 import utils.*;
 
 import javax.validation.constraints.Min;
@@ -61,31 +63,44 @@ public class Preprocess {
         JavaRDD<String> rowRdd = d.filter(line -> !line.equals(header1));
 
 
-        JavaPairRDD<Integer, Stats> pair = rowRdd.mapToPair(new PairFunction<String, Integer, Stats>() {
+        JavaPairRDD<Integer, Double> pair = rowRdd.mapToPair(new PairFunction<String, Integer, Double>() {
+
             @Override
-            public Tuple2<Integer, Stats> call(String value) throws Exception {
+            public Tuple2<Integer, Double> call(String value) throws Exception {
 
                 String[] arr = value.split(",");
                 String[] timestamp = arr[0].split("T");
 
-                int cured = Integer.parseInt(arr[9]);
+                double cured = Double.parseDouble(arr[9]);
                 int swabds = Integer.parseInt(arr[12]);
 
                 int initial_week = 9;
                 int week = Common.getWeekFrom(timestamp[0]) - initial_week;
 
-                Stats stats = new Stats();
-                stats.setMin_cured(cured);
-                stats.setMax_cured(cured);
-                stats.setMin_swabds(swabds);
-                stats.setMax_swabds(swabds);
 
-                return new Tuple2<Integer, Stats>(week, stats);
+                return new Tuple2<Integer, Double>(week, cured);
             }
 
         });
 
 
+        JavaPairRDD<Integer, StatCounter> output = pair.aggregateByKey(new StatCounter(), StatCounter::merge, StatCounter::merge);
+
+        JavaRDD<Tuple3<Integer, Double, Double>> statistics = output.map(new Function<Tuple2<Integer, StatCounter>, Tuple3<Integer, Double, Double>>() {
+                    @Override
+                    public Tuple3<Integer, Double, Double> call(Tuple2<Integer, StatCounter> stats) throws Exception {
+                        return new Tuple3<Integer, Double, Double>(stats._1(), stats._2().stdev(), stats._2().mean());
+                    }
+                });
+
+
+        for (Tuple3<Integer, Double, Double> string : statistics.collect()) {
+            System.out.println(string._1() + " " + string._2() + " " + string._3());
+        }
+
+
+
+        /*
         JavaPairRDD<Integer, Stats> statsAgg = pair.reduceByKey(new Function2<Stats, Stats, Stats>() {
             @Override
             public Stats call(Stats result, Stats value) throws Exception {
@@ -106,11 +121,7 @@ public class Preprocess {
                 return result;
             }
         }).sortByKey();
-
-
-        for (Tuple2<Integer, Stats> agg : statsAgg.collect()) {
-            System.out.println(agg._1 + " (" + agg._2.getAvg_cured() + ", " + agg._2.getAvg_swabds() + ")");
-        }
+*/
 
 
             //JavaRDD<Tuple2<String, Integer>> values = clickstreamRDD.map(new GetLength());
