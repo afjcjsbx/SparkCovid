@@ -2,8 +2,15 @@ package utils;
 
 import data.Covid2Data;
 import data.Covid2DataInner;
+import enums.Continent;
+import org.graalvm.compiler.core.phases.EconomyHighTier;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class DataParser {
 
@@ -23,7 +30,7 @@ public class DataParser {
 
     public static Covid2Data parseCSVcovid2data(String csvLine, String header){
 
-        //pARSER
+        //PARSER
         String[] data = csvLine.split(",");
 
         Covid2Data covid2Data = new Covid2Data();
@@ -44,5 +51,38 @@ public class DataParser {
         }
 
         return covid2Data;
+    }
+
+    public static HashMap<String, String> countryParser(String csvFile) throws IOException, FileNotFoundException {
+
+        String line =  null;
+        HashMap<String, String> countries = new HashMap<String, String>();
+
+        BufferedReader br = new BufferedReader(new FileReader(csvFile));
+
+        while((line=br.readLine())!=null){
+            String str[] = line.split(",");
+            if (str[0].equals("name")) {
+            } else {
+                countries.put(str[0], str[5]);
+            }
+        }
+        return countries;
+    }
+
+    public static Continent mappingContinent(String continent){
+        if (continent.equals("Europe")){
+            return Continent.EUROPE;
+        } else if (continent.equals("Americas")){
+            return Continent.AMERICAS;
+        } else if (continent.equals("Africa")){
+            return Continent.AFRICA;
+        } else if (continent.equals("Asia")){
+            return Continent.ASIA;
+        } else if (continent.equals("Oceania")){
+            return Continent.OCEANIA;
+        } else {
+            return Continent.ANTARCTICA;
+        }
     }
 }
