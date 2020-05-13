@@ -21,26 +21,28 @@ public class DataParser {
         return cdata;
     }
 
-    public static Covid2Data parseCSVcovid2data(String csvLine, Integer days, String[] header){
+    public static Covid2Data parseCSVcovid2data(String csvLine, String header){
 
-        String[] csvValues = csvLine.split(",", -1);
-        ArrayList<Covid2DataInner> data = new ArrayList<>();
+        //pARSER
+        String[] data = csvLine.split(",");
 
-        Covid2Data cdata = new Covid2Data();
-        cdata.setStato(csvValues[0]);
-        cdata.setRegione(csvValues[1]);
-        cdata.setLatitudine(Integer.parseInt(csvValues[2]));
-        cdata.setLongitudine(Integer.parseInt(csvValues[3]));
+        Covid2Data covid2Data = new Covid2Data();
+        covid2Data.setState(data[0]);
+        covid2Data.setCountry(data[1]);
+        covid2Data.setLat(Double.parseDouble(data[2]));
+        covid2Data.setLng(Double.parseDouble(data[3]));
 
-        for (int i = 4; i < days; i++){
-            Covid2DataInner futher_info = new Covid2DataInner();
-            futher_info.setDay(header[i]);
-            futher_info.setConfirmed_cases(Integer.parseInt(csvValues[i]));
-            data.add(futher_info);
+        String[] head = header.split(",");
+
+
+        for(int i = 4; i < data.length; i++){
+            Covid2DataInner covid2DataInner = new Covid2DataInner();
+            covid2DataInner.setDay(head[i]);
+            covid2DataInner.setConfirmed_cases(Integer.parseInt(data[i]));
+
+            covid2Data.getDays().add(covid2DataInner);
         }
 
-        cdata.setData(data);
-
-        return cdata;
+        return covid2Data;
     }
 }
