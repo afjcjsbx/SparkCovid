@@ -1,4 +1,5 @@
 
+import data.Stats;
 import helpers.Common;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -6,9 +7,11 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.PairFunction;
 import scala.Tuple2;
 import utils.*;
 
+import javax.validation.constraints.Min;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
@@ -52,54 +55,65 @@ public class Preprocess {
         long fParseFile = System.currentTimeMillis();
 
 
-
         JavaRDD<String> d = sc.textFile("src/main/resources/dataset1.csv");
 
         String header1 = d.first();
         JavaRDD<String> rowRdd = d.filter(line -> !line.equals(header1));
 
 
-        JavaPairRDD<String, Tuple2<Integer, Integer>> clickstreamRDD = rowRdd.mapToPair((String s) -> {
-
-            String[] arr = s.split(",");
-            String[] timestamp = arr[0].split("T");
-
-            int guariti = Integer.parseInt(arr[9]);
-
-            int initial_week = 9;
-            String week = Integer.toString(Common.getWeekFrom(timestamp[0]) - initial_week);
-            System.out.println("Tuple: " + week + " " + guariti);
-
-
-            return new Tuple2<String, Tuple2<Integer, Integer>>(week, new Tuple2(guariti, guariti));
-        }).reduceByKey(new Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>() {
-
-            /**
-             *
-             */
-            private static final long serialVersionUID = 1L;
-
+        JavaPairRDD<String, Stats> pair = rowRdd.mapToPair(new PairFunction<String, String, Stats>() {
             @Override
-            public Tuple2<Integer, Integer> call(Tuple2<Integer, Integer> tuple1, Tuple2<Integer, Integer> tuple2) throws Exception {
+            public Tuple2<String, Stats> call(String value) throws Exception {
 
-                return new Tuple2(Math.max(tuple1._1(), tuple1._1()), Math.min(tuple2._1(), tuple2._2()));
+                String[] arr = value.split(",");
+                String[] timestamp = arr[0].split("T");
+
+                int cured = Integer.parseInt(arr[9]);
+                int swabds = Integer.parseInt(arr[12]);
+
+                int initial_week = 9;
+                String week = Integer.toString(Common.getWeekFrom(timestamp[0]) - initial_week);
+
+                Stats stats = new Stats();
+                stats.setMin_cured(cured);
+                stats.setMax_cured(cured);
+                stats.setMin_swabds(swabds);
+                stats.setMax_swabds(swabds);
+
+                return new Tuple2<String, Stats>(week, stats);
+            }
+
+        });
+
+
+        JavaPairRDD<String, Stats> statsAgg = pair.reduceByKey(new Function2<Stats, Stats, Stats>() {
+            @Override
+            public Stats call(Stats result, Stats value) throws Exception {
+                if (value.getMax_cured() > result.getMax_cured()) {
+                    result.setMax_cured(value.getMax_cured());
+                }
+                if (value.getMax_cured() < result.getMin_cured()) {
+                    result.setMin_cured(value.getMin_cured());
+                }
+
+                if (value.getMax_swabds() > result.getMax_swabds()) {
+                    result.setMax_swabds(value.getMax_swabds());
+                }
+                if (value.getMax_swabds() < result.getMin_swabds()) {
+                    result.setMin_swabds(value.getMin_swabds());
+                }
+
+                return result;
             }
         });
 
 
-        class GetLength implements Function<Tuple2<String, Tuple2<Integer, Integer>>, Tuple2<String, Integer>> {
-            public Tuple2<String, Integer> call(Tuple2<String, Tuple2<Integer, Integer>> s) {
-                return new Tuple2<String, Integer>(s._1(), (s._2._2() - s._2()._1()) / 7);
-            }
+        for (Tuple2<String, Stats> agg : statsAgg.collect()) {
+            System.out.println(agg._1 + " (" + agg._2.getAvg_cured() + ", " + agg._2.getAvg_swabds() + ")");
         }
 
 
-        JavaRDD<Tuple2<String, Integer>> values = clickstreamRDD.map(new GetLength());
-
-
-        for (Tuple2<String, Integer> line : values.collect()) {
-            System.out.println("* " + line);
-        }
+            //JavaRDD<Tuple2<String, Integer>> values = clickstreamRDD.map(new GetLength());
 
 
 

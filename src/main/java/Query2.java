@@ -57,35 +57,21 @@ public class Query2 {
                 rowRdd.map(line -> DataParser.parseCSVcovid2data(line, header));
 
 
-        JavaPairRDD<String, Integer> clickstreamRDD = countries.mapToPair(new PairFunction<Covid2Data, String, Integer>() {
-            @Override
-            public Tuple2<String, Integer> call(Covid2Data covid2Data) throws Exception {
-
-                    String key = covid2Data.getCountry();
-                    Integer value = covid2Data.getDays().iterator();
-
-                    return new Tuple2<String, Integer> (key, coefficient);
-            }
-        });
-
-
-            /*
-                  JavaPairRDD<String, Double> clickstreamRDD = countries.mapToPair(new PairFunction<Covid2Data, String, Double>() {
+        JavaPairRDD<String, Double> clickstreamRDD = countries.mapToPair(new PairFunction<Covid2Data, String, Double>() {
             @Override
             public Tuple2<String, Double> call(Covid2Data covid2Data) throws Exception {
 
-                    String key = covid2Data.getCountry();
-                    Double coefficient = new LinearRegression(covid2Data.getDays()).getCoefficient();
+                String key = covid2Data.getCountry();
+                Double coefficient = new LinearRegression(covid2Data.getDays()).getCoefficient();
 
-                    return new Tuple2<String, Double> (key, coefficient);
+                return new Tuple2<String, Double>(key, coefficient);
             }
         });
 
-             */
-        for (Tuple2<String, Double> mm : clickstreamRDD.collect()){
+
+        for (Tuple2<String, Double> mm : clickstreamRDD.collect()) {
             System.out.println(mm.toString());
         }
-
 
 
         long fOperations = System.currentTimeMillis();
