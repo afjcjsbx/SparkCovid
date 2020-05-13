@@ -63,35 +63,35 @@ public class Preprocess {
         JavaRDD<String> rowRdd = d.filter(line -> !line.equals(header1));
 
 
-        JavaPairRDD<Integer, Double> pair = rowRdd.mapToPair(new PairFunction<String, Integer, Double>() {
+        JavaPairRDD<Integer, Tuple2<Double, Double>> pair = rowRdd.mapToPair(new PairFunction<String, Integer, Tuple2<Double, Double>>() {
 
             @Override
-            public Tuple2<Integer, Double> call(String value) throws Exception {
+            public Tuple2<Integer, Tuple2<Double, Double>> call(String value) throws Exception {
 
                 String[] arr = value.split(",");
                 String[] timestamp = arr[0].split("T");
 
                 double cured = Double.parseDouble(arr[9]);
-                int swabds = Integer.parseInt(arr[12]);
+                double swabds = Double.parseDouble(arr[12]);
 
                 int initial_week = 9;
                 int week = Common.getWeekFrom(timestamp[0]) - initial_week;
 
-
-                return new Tuple2<Integer, Double>(week, cured);
+                return new Tuple2<Integer, Tuple2<Double, Double>>(week, new Tuple2<Double, Double>(cured, swabds));
             }
-
         });
 
 
-        JavaPairRDD<Integer, StatCounter> output = pair.aggregateByKey(new StatCounter(), StatCounter::merge, StatCounter::merge);
+        JavaPairRDD<Integer, Tuple2<StatCounter, StatCounter>> output = pair.aggregateByKey(new StatCounter(), StatCounter::merge, StatCounter::merge);
 
-        JavaRDD<Tuple3<Integer, Double, Double>> statistics = output.map(new Function<Tuple2<Integer, StatCounter>, Tuple3<Integer, Double, Double>>() {
-                    @Override
-                    public Tuple3<Integer, Double, Double> call(Tuple2<Integer, StatCounter> stats) throws Exception {
-                        return new Tuple3<Integer, Double, Double>(stats._1(), stats._2().stdev(), stats._2().mean());
-                    }
-                });
+
+        JavaRDD<Tuple3<Integer, Double, Double>> statistics = output.map(new Function<Tuple2<Double, Double>, Tuple3<Integer, Double, Double>>() {
+            @Override
+            public Tuple3<Integer, Double, Double> call(Tuple2<Integer, Tuple2<StatCounter, StatCounter>> stats) throws Exception {
+                return new Tuple3<Integer, Double, Double>(stats._1(), stats._1().stdev(), stats._2().mean());
+            }
+
+        });
 
 
         for (Tuple3<Integer, Double, Double> string : statistics.collect()) {
@@ -124,7 +124,7 @@ public class Preprocess {
 */
 
 
-            //JavaRDD<Tuple2<String, Integer>> values = clickstreamRDD.map(new GetLength());
+        //JavaRDD<Tuple2<String, Integer>> values = clickstreamRDD.map(new GetLength());
 
 
 
