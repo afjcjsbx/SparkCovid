@@ -61,9 +61,9 @@ public class Preprocess {
         JavaRDD<String> rowRdd = d.filter(line -> !line.equals(header1));
 
 
-        JavaPairRDD<String, Stats> pair = rowRdd.mapToPair(new PairFunction<String, String, Stats>() {
+        JavaPairRDD<Integer, Stats> pair = rowRdd.mapToPair(new PairFunction<String, Integer, Stats>() {
             @Override
-            public Tuple2<String, Stats> call(String value) throws Exception {
+            public Tuple2<Integer, Stats> call(String value) throws Exception {
 
                 String[] arr = value.split(",");
                 String[] timestamp = arr[0].split("T");
@@ -72,7 +72,7 @@ public class Preprocess {
                 int swabds = Integer.parseInt(arr[12]);
 
                 int initial_week = 9;
-                String week = Integer.toString(Common.getWeekFrom(timestamp[0]) - initial_week);
+                int week = Common.getWeekFrom(timestamp[0]) - initial_week;
 
                 Stats stats = new Stats();
                 stats.setMin_cured(cured);
@@ -80,13 +80,13 @@ public class Preprocess {
                 stats.setMin_swabds(swabds);
                 stats.setMax_swabds(swabds);
 
-                return new Tuple2<String, Stats>(week, stats);
+                return new Tuple2<Integer, Stats>(week, stats);
             }
 
         });
 
 
-        JavaPairRDD<String, Stats> statsAgg = pair.reduceByKey(new Function2<Stats, Stats, Stats>() {
+        JavaPairRDD<Integer, Stats> statsAgg = pair.reduceByKey(new Function2<Stats, Stats, Stats>() {
             @Override
             public Stats call(Stats result, Stats value) throws Exception {
                 if (value.getMax_cured() > result.getMax_cured()) {
@@ -105,10 +105,10 @@ public class Preprocess {
 
                 return result;
             }
-        });
+        }).sortByKey();
 
 
-        for (Tuple2<String, Stats> agg : statsAgg.collect()) {
+        for (Tuple2<Integer, Stats> agg : statsAgg.collect()) {
             System.out.println(agg._1 + " (" + agg._2.getAvg_cured() + ", " + agg._2.getAvg_swabds() + ")");
         }
 

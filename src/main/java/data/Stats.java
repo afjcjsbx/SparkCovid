@@ -44,13 +44,13 @@ public class Stats implements Serializable {
     }
 
 
-    public int getAvg_swabds() {
-        return (max_swabds - min_swabds) / DAYS;
+    public Double getAvg_swabds() {
+        return (double) (max_swabds - min_swabds) / DAYS;
     }
 
 
-    public int getAvg_cured() {
-        return (max_cured - min_cured) / DAYS;
+    public Double getAvg_cured() {
+        return (double) (max_cured - min_cured) / DAYS;
     }
 
 }
