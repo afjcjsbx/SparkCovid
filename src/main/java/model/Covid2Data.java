@@ -9,6 +9,7 @@ public class Covid2Data implements Serializable {
     private String country;
     private double lat;
     private double lng;
+
     private ArrayList<Integer> cases;
 
     public Covid2Data() {

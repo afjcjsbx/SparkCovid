@@ -2,7 +2,9 @@ package utils;
 
 import model.Region;
 
-public class RegionParser {
+import java.io.Serializable;
+
+public class RegionParser implements Serializable {
 
     public static Region parseCSVRegion(String line) {
 

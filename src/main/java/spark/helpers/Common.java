@@ -60,22 +60,5 @@ public class Common {
     }
 
 
-    public static double calculateSD(ArrayList<Integer> vals) {
-        double sum = 0.0, standardDeviation = 0.0;
-        int length = vals.size();
-
-        for(double num : vals) {
-            sum += num;
-        }
-
-        double mean = sum / length;
-
-        for(double num: vals) {
-            standardDeviation += Math.pow(num - mean, 2);
-        }
-
-        return Math.sqrt(standardDeviation / length);
-    }
-
 
 }

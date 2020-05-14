@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public class StartProcessing {
 
-    private static final Logger log = LogManager.getLogger(StartProcessing.class);
+    //private static final Logger log = LogManager.getLogger(StartProcessing.class);
 
     // File di configurazione
     private final static Config config = Config.getInstance();
@@ -21,15 +21,15 @@ public class StartProcessing {
             if (args.length != 0) config.load(args[0]);
             else config.load();
         } catch (IOException e) {
-            log.error("Error while reading configuration file");
+            //log.error("Error while reading configuration file");
             e.printStackTrace();
         }
-        log.info(config.toString());
+        //log.info(config.toString());
 
         Spark sparkProcessor = new Spark();
         JavaSparkContext sparkContext = sparkProcessor.getSparkContext();
 
-        sparkProcessor.addQuery(new Query1(sparkContext));
+        //sparkProcessor.addQuery(new Query1(sparkContext));
         sparkProcessor.addQuery(new Query2(sparkContext));
 
         sparkProcessor.startQueries();

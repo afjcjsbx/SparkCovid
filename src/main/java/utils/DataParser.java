@@ -1,5 +1,6 @@
 package utils;
 
+import model.Covid1Data;
 import model.Covid2Data;
 import enums.Continent;
 

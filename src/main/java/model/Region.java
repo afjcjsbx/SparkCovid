@@ -1,6 +1,8 @@
 package model;
 
-public class Region {
+import java.io.Serializable;
+
+public class Region implements Serializable {
 
     private String country;
     private String continent;

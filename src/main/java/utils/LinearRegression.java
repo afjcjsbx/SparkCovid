@@ -1,6 +1,6 @@
 package utils;
 
-import java.util.ArrayList;
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -17,7 +17,7 @@ import java.util.List;
  * @author Robert Sedgewick
  * @author Kevin Wayne
  */
-public class LinearRegression {
+public class LinearRegression implements Serializable {
     private final double intercept, slope;
     private final double r2;
     private final double svar0, svar1;
@@ -37,10 +37,9 @@ public class LinearRegression {
         int n = y.size();
 
         // first pass
-        double sumx = 0.0, sumy = 0.0, sumx2 = 0.0;
+        double sumx = 0.0, sumy = 0.0;
         for (int i = 0; i < n; i++) {
             sumx += i;
-            sumx2 += i * i;
             sumy += y.get(i);
         }
         double xbar = sumx / n;

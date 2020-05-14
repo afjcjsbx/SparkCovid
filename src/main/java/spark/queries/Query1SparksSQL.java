@@ -12,7 +12,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import scala.Tuple3;
-import utils.Covid1Data;
+import model.Covid1Data;
 import utils.DataParser;
 
 import java.io.IOException;
