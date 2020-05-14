@@ -1,6 +1,6 @@
 package utils;
 
-import data.Covid2Data;
+import model.Covid2Data;
 import enums.Continent;
 
 import java.io.BufferedReader;
@@ -50,9 +50,11 @@ public class DataParser {
                     res = 0;
                 else
                     res = n2 - n1;
-                covid2Data.getCases().add(res);
+                cases.add(res);
             }
         }
+
+        covid2Data.setCases(cases);
 
 
         return covid2Data;

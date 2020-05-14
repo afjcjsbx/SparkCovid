@@ -46,12 +46,21 @@
             <artifactId>guava</artifactId>
             <version>23.6-jre</version>
         </dependency>
+
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore</artifactId>
             <version>4.4.8</version>
         </dependency>
 
+
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.12</version>
+            <scope>provided</scope>
+        </dependency>
 
     </dependencies>
 

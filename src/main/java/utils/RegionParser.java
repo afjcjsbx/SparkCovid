@@ -1,6 +1,6 @@
 package utils;
 
-import data.Region;
+import model.Region;
 
 public class RegionParser {
 
