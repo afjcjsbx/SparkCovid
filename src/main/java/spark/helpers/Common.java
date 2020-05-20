@@ -43,12 +43,15 @@ public class Common {
     }
 
 
-    public Integer getMonthFromDate(String date) {
+    public static Integer getMonthFromDate(String date) {
 
-        SimpleDateFormat df = new SimpleDateFormat("MM/dd/yy");
+        SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
 
+        // Aggiungo l'anno manualmente perché questo anno (2020) è bisestile
+        // altrimenti mi conta il mese di febbraio di 28 giorni perché
+        // l'anno nel dataset non è indicato
         try {
-            Date d = df.parse(date);
+            Date d = df.parse(date + "/2020");
             calendar.setTime(d);
             return calendar.get(Calendar.MONTH);
 
