@@ -1,7 +1,9 @@
 package spark.queries;
 
 import lombok.Getter;
+import model.Config;
 import model.Covid1Data;
+import redis.clients.jedis.Jedis;
 import spark.helpers.Common;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -18,7 +20,7 @@ public class Query1 implements IQuery {
     @Getter
     private JavaRDD<Covid1Data> rddIn;
     @Getter
-    private JavaPairRDD<Tuple2<String, Integer>, Integer> rddOut;
+    private JavaPairRDD<Integer, Tuple2<Double, Double>> rddOut;
 
     private static String datasetPath = "src/main/resources/dataset1.csv";
 
@@ -88,10 +90,10 @@ public class Query1 implements IQuery {
 
 
         //Unisco i due RDDs
-        JavaPairRDD<Integer, Tuple2<Double, Double>> resultRDD = rddWeeklyAvgHealed.join(rddWeeklyAvgSwabds).sortByKey();
+        rddOut = rddWeeklyAvgHealed.join(rddWeeklyAvgSwabds).sortByKey();
 
 
-        for (Tuple2<Integer, Tuple2<Double, Double>> string : resultRDD.collect()) {
+        for (Tuple2<Integer, Tuple2<Double, Double>> string : rddOut.collect()) {
             System.out.println(string._1() + " " + string._2()._1() + " " + string._2()._2());
         }
 
@@ -103,6 +105,21 @@ public class Query1 implements IQuery {
 
     @Override
     public void store() {
+
+        this.rddOut.foreachPartition(partition -> partition.forEachRemaining(record -> {
+            Jedis jedis = new Jedis("localhost");
+            jedis.select(0);
+
+            jedis.set(
+                    record._1().toString(),
+                    String.format(
+                            "%s - old ranking: %s",
+                            record._2()._1(),
+                            record._2()._2()
+                    ));
+
+        }));
+
 
     }
 }

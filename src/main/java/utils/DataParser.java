@@ -33,8 +33,8 @@ public class DataParser {
         String[] data = csvLine.split(",");
 
         Covid2Data covid2Data = new Covid2Data();
-        covid2Data.setState(data[0]);
-        covid2Data.setCountry(data[1]);
+        //State not set use country
+        covid2Data.setState(data[0].isEmpty() ? data[1] : data[0]);
         covid2Data.setLat(Double.parseDouble(data[2]));
         covid2Data.setLng(Double.parseDouble(data[3]));
 

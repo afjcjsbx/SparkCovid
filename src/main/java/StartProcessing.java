@@ -6,6 +6,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import spark.Spark;
 import spark.queries.Query1;
 import spark.queries.Query2;
+import spark.queries.Query3;
 
 import java.io.IOException;
 
@@ -29,8 +30,9 @@ public class StartProcessing {
         Spark sparkProcessor = new Spark();
         JavaSparkContext sparkContext = sparkProcessor.getSparkContext();
 
-        //sparkProcessor.addQuery(new Query1(sparkContext));
-        sparkProcessor.addQuery(new Query2(sparkContext));
+        sparkProcessor.addQuery(new Query1(sparkContext));
+        //sparkProcessor.addQuery(new Query2(sparkContext));
+        //sparkProcessor.addQuery(new Query3(sparkContext));
 
         sparkProcessor.startQueries();
 

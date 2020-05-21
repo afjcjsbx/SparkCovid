@@ -6,7 +6,6 @@ import java.util.ArrayList;
 public class Covid2Data implements Serializable {
 
     private String state;
-    private String country;
     private double lat;
     private double lng;
 
@@ -24,13 +23,6 @@ public class Covid2Data implements Serializable {
         this.state = state;
     }
 
-    public String getCountry() {
-        return country;
-    }
-
-    public void setCountry(String country) {
-        this.country = country;
-    }
 
     public double getLat() {
         return lat;
@@ -60,7 +52,6 @@ public class Covid2Data implements Serializable {
     public String toString() {
         return "Covid2Data{" +
                 "state='" + state + '\'' +
-                ", country='" + country + '\'' +
                 ", lat=" + lat +
                 ", lng=" + lng +
                 ", days=" + cases +

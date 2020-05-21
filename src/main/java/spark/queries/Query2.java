@@ -9,6 +9,8 @@ import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.PairFunction;
 import scala.Tuple2;
+import scala.Tuple3;
+import scala.Tuple4;
 import spark.helpers.Common;
 import utils.DataParser;
 import utils.LinearRegression;
@@ -74,8 +76,8 @@ public class Query2 implements IQuery {
      * Esecuzione della query 2.
      *
      * QUERY 2:
-     *      Per ogni continente calcolare la media, deviazione standard, minimo, massimo e
-     *      del numero di casi confermati su base settimanale.
+     *      Per ogni continente calcolare la media, deviazione standard, minimo, massimo del
+     *      numero di casi confermati su base settimanale.
      *      Nota: Considerare solo i maggiori 100 stati colpiti, per calcolare gli stati
      *      maggiormente colpiti andiamo a calcolare il coefficiente di trenline utilizzando
      *      una regressione lineare.
@@ -89,18 +91,18 @@ public class Query2 implements IQuery {
         // dello stato e lo ordino in modo decrescente dallo stato più colpito a quello meno colpito
         JavaPairRDD<Double, String> rddTrends = rddIn.mapToPair((PairFunction<Covid2Data, Double, String>) value -> {
             double slope = new LinearRegression(value.getCases()).getCoefficient();
-            return new Tuple2<>(slope, value.getCountry());
+            return new Tuple2<>(slope, value.getState());
         }).sortByKey(false);
 
 
         // Considero i 100 stati meggiormente colpiti
         List<Tuple2<Double, String>> pairTop = rddTrends.sortByKey(false).take(100);
-        /**
-         * Ancora non prendo i Top 100 paesi colpiti perche devo vedere come trasformare una lista di tuple in RDD
-         */
+
+        // Convero la lista precedentemente calcolata in un RDD
+        JavaRDD<Tuple2<Double, String>> input2 = sparkContext.parallelize(pairTop);
 
         // Creo un RDD composto da una String che rappresenta il nome dello stato e i relativi dati di quello stato
-        JavaPairRDD<String,Covid2Data> rddStateData = rddIn.mapToPair(x-> new Tuple2<>(x.getCountry(),x));
+        JavaPairRDD<String,Covid2Data> rddStateData = rddIn.mapToPair(x-> new Tuple2<>(x.getState(),x));
 
         // Creo un RDD composto da una String che rappresenta il nome dello stato e una Tupla2 che ha come
         // primo campo i dati relativi a quello stato e come secondo campo il continente a cui quello stato
@@ -157,9 +159,6 @@ public class Query2 implements IQuery {
                     return result_flat.iterator();
                 });
 
-        for (Tuple2<Tuple2<String, String>, Integer> j : rddComplete.collect()){
-            System.out.println(j);
-        }
 
 
 
@@ -191,6 +190,12 @@ public class Query2 implements IQuery {
                 .reduceByKey(Double::sum).join(count)
                 .mapToPair(x->new Tuple2<>(x._1(),Math.sqrt(x._2()._1()/x._2()._2())));
 
+
+
+
+        for (Tuple2<Tuple2<String, String>, Double> j : rddStdDev.collect()){
+            System.out.println(j);
+        }
 
 
         long finalTime = System.currentTimeMillis();

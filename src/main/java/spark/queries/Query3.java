@@ -1,87 +1,300 @@
 package spark.queries;
 
-import org.apache.spark.SparkConf;
+import lombok.Getter;
+import model.Covid2Data;
+import org.apache.commons.io.FileUtils;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import utils.ConvertData;
+import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.mllib.clustering.KMeans;
+import org.apache.spark.mllib.clustering.KMeansModel;
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.Vectors;
+import scala.Tuple2;
+import spark.helpers.Common;
+import utils.DataParser;
+import utils.LinearRegression;
+import utils.RegionParser;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.Calendar;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
-public class Query3 {
 
-    String pathFileWeatherDescription = "hdfs://127.0.0.1:54310/dpc-covid19-ita-andamento-nazionale.csv";
+public class Query3 implements IQuery {
 
-    public static void main(String[] args) throws IOException, URISyntaxException {
+    // KMeans parameters
+    private static int NUM_CLUSTERS = 3;
+    private static int NUM_ITERATIONS = 20;
+
+
+    private final JavaSparkContext sparkContext;
+
+    @Getter
+    private JavaRDD<Covid2Data> rddIn;
+    @Getter
+    private JavaPairRDD<Tuple2<String, Integer>, Integer> rddOut;
+    @Getter
+    private JavaPairRDD<String, String> rddPairCountryContinent;
+
+    private static String datasetPath = "src/main/resources/dataset2.csv";
+    private static String regionPath = "src/main/resources/country_continent.csv";
+
+
+    public Query3(JavaSparkContext sparkContext) {
+        this.sparkContext = sparkContext;
+    }
+
+    /**
+     * Caricamento dei dati dal data store HDFS
+     */
+    @Override
+    public void load() {
+
+        long iParseFile = System.currentTimeMillis();
+
+        JavaRDD<String> input = sparkContext.textFile(datasetPath);
+        String header = input.first();
+
+
+        //get ther other lines of csv file
+        JavaRDD<String> rowRdd = input.filter(row -> !row.equals(header));
+        // Extract and parse tweet
+        rddIn = rowRdd.map(line -> DataParser.parseCSVcovid2data(line, header)).cache();
+
+
+        //Load RDD regions mapping
+        JavaRDD<String> rddRegions = sparkContext.textFile(regionPath);
+        String headerRegion = rddRegions.first();
+        rddRegions = rddRegions.filter(x -> !x.equals(headerRegion));
+        rddPairCountryContinent = rddRegions
+                .mapToPair(x -> new Tuple2<>(RegionParser.parseCSVRegion(x).getCountry(), RegionParser.parseCSVRegion(x).getContinent()));
+
+        long fParseFile = System.currentTimeMillis();
+        System.out.printf("Total time to parse files: %s ms\n", (fParseFile - iParseFile));
+
+
+    }
+
+    /**
+     * Esecuzione della query 2.
+     * <p>
+     * QUERY 2:
+     * Per ogni continente calcolare la media, deviazione standard, minimo, massimo e
+     * del numero di casi confermati su base settimanale.
+     * Nota: Considerare solo i maggiori 100 stati colpiti, per calcolare gli stati
+     * maggiormente colpiti andiamo a calcolare il coefficiente di trenline utilizzando
+     * una regressione lineare.
+     */
+    @Override
+    public void execute() {
 
         long initialTime = System.currentTimeMillis();
 
-        //Configurazione di Spark
-        SparkConf conf = new SparkConf()
-                .setMaster("local")
-                .setAppName("Hello World");
-        conf.set("spark.driver.bindAddress", "127.0.0.1");
 
-        JavaSparkContext sc = new JavaSparkContext(conf);
+        // Creo un RDD composto da una String che rappresenta il nome dello stato e i relativi dati di quello stato
+        JavaPairRDD<String, Covid2Data> rddStateData = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x));
 
-        long iOperations = System.currentTimeMillis();
+        // Creo un RDD composto da una String che rappresenta il nome dello stato e una Tupla2 che ha come
+        // primo campo i dati relativi a quello stato e come secondo campo il continente a cui quello stato
+        // fa parte
+        //JavaPairRDD<String, Tuple2<Covid2Data, String>> rddContinents = rddStateData.join(rddPairCountryContinent);
 
-        //Apro il file
-        JavaRDD<String> input = sc.textFile("src/main/resources/dataset2.csv");
+
+        // Creo un RDD composto da una String che rappresenta il nome del continente e una lista di interi in
+        // cui ci sono i casi totali relativi giorno per giorno
+        JavaPairRDD<String, ArrayList<Integer>> rdd_region_final = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x.getCases()));
+
+
+        // Creo un RDD composto da una Tupla2<String, String> che avrà il nome del continente come
+        // primo campo e il numero della settimana come secondo campo, Il valore Integer rappresenta
+        // il numero dei casi relativi per un giorno di quella settimana per ogni stato quindi conterrà
+        // n tuple dove n sono tutti gli stati
+        JavaPairRDD<String, ArrayList<Integer>> rddContinentDayByDay = rdd_region_final
+                .reduceByKey((Function2<ArrayList<Integer>, ArrayList<Integer>, ArrayList<Integer>>) (arr1, arr2) -> {
+                    ArrayList<Integer> sum = new ArrayList<>();
+                    for (int z = 0; z < arr1.size(); z++)
+                        sum.add(arr1.get(z) + arr2.get(z));
+                    return sum;
+                });
+
+
+        // Da implementare nel load
+        JavaRDD<String> input = sparkContext.textFile(datasetPath);
         String header = input.first();
-        String[] firstLine = header.split(",", -1);
-        final Integer num_of_days = firstLine.length - 4; //I primi 4 sono parametri fissi
+        String[] cols = header.split(",");
+        ArrayList<String> dates = new ArrayList<>(Arrays.asList(cols).subList(4, cols.length));
+        ArrayList<Integer> months = new ArrayList<>();
+        for (String date : dates) {
+            months.add(Common.getMonthFromDate(date));
+        }
 
-        //get ther other lines of csv file
-        long iParseFile = System.currentTimeMillis();
-        JavaRDD<String> otherLines = input.filter(row -> !row.equals(header));
-        //JavaRDD<Covid2Data> weeklyDate = otherLines.map(line -> DataParser.parseCSVcovid2data(line, num_of_days, firstLine));
-        long fParseFile = System.currentTimeMillis();
 
-        String initialDate = firstLine[4];
-        String finalDate = firstLine[firstLine.length];
+        // Creo un RDD composto da una Tupla2<String, String> che avrà il nome del continente come
+        // primo campo e il numero della settimana come secondo campo, Il valore Integer rappresenta
+        // il numero dei casi relativi per un giorno di quella settimana della somma di tutti i casi
+        // per ogni stato
+        JavaPairRDD<Tuple2<String, Integer>, Integer> rddComplete = rddContinentDayByDay
+                .flatMapToPair((PairFlatMapFunction<Tuple2<String, ArrayList<Integer>>, Tuple2<String, Integer>, Integer>) arrayListTuple2 -> {
+                    ArrayList<Tuple2<Tuple2<String, Integer>, Integer>> result_flat = new ArrayList<>();
 
-        System.out.println("initialDate: " + initialDate);
-        System.out.println("finalDate: " + finalDate);
+                    for (int i = 1; i < months.size(); i++) {
+                        Tuple2<Tuple2<String, Integer>, Integer> temp = new Tuple2<>(
+                                new Tuple2<>(arrayListTuple2._1(), months.get(i)), arrayListTuple2._2().get(i));
+                        result_flat.add(temp);
+                    }
 
-        //Convert String to data format (m/gg/aa)
-        Calendar data_inizio = ConvertData.convert(initialDate);
-        Calendar data_fine = ConvertData.convert(finalDate);
+                    return result_flat.iterator();
+                });
+
+
+        // Raggruppo per chiave : <Stato ,Mese> ottenend un rdd <Stato ,Mese>, Iterable
+        // dei nuovi casi del mese giorno per giorno
+        JavaPairRDD<Tuple2<String, Integer>, Iterable<Integer>> rddTotalCasesInStateByMonth = rddComplete.groupByKey();
+
+
+        // Colcoliamo il trend mese per mese per ogni stato ottenendo cos' un RDD che ha come
+        // chiave il mese e come campo una tupla2 contenente come primo valore il Trend e come
+        // secondo valore il nome dello stato
+        JavaPairRDD<Integer, Tuple2<Double, String>> grouped = rddTotalCasesInStateByMonth.mapToPair((PairFunction<Tuple2<Tuple2<String, Integer>, Iterable<Integer>>, Integer, Tuple2<Double, String>>) input1 -> {
+
+            String state_name = input1._1()._1();
+            Integer month = input1._1()._2();
+            ArrayList<Integer> casesPerMonth = new ArrayList<>();
+
+            for (Integer value : input1._2()) {
+                casesPerMonth.add(value);
+            }
+
+            double res = new LinearRegression(casesPerMonth).getCoefficient();
+            return new Tuple2<>(month, new Tuple2<>(res, state_name));
+        });
+
+/*
+        Una volta ottenuti i trend per ogni mese, raggruppiamo per chiave ottenendo un pair rdd composto da:
+        <Mese>,<Iterable<Trend,Nome dello stato>>
+         */
+        JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> resultGrouped = grouped.groupByKey();
+
+
+        //Definiamo un arrayList contente le tuple del tipo <Numero Mese, Lista di Tuple< Trend, Nome stato >> corrispettivi al mese
+        List<Tuple2<Integer, List<Tuple2<Double, String>>>> listTopStatesPerMonth = new ArrayList<>();
+
+
+        for (int i = 0; i < resultGrouped.countByKey().size(); i++) {
+
+            int fI = i;
+            JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> rddMonthsStates = resultGrouped.filter(x -> x._1().equals(fI));
+            JavaPairRDD<Double, String> rddMonthsCoefficient = rddMonthsStates.
+                    flatMapToPair((PairFlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Double, String>) input12 -> {
+
+                        ArrayList<Tuple2<Double, String>> result = new ArrayList<>();
+                        for (Tuple2<Double, String> tuple : input12._2()) {
+                            result.add(tuple);
+                        }
+                        return result.iterator();
+                    });
+
+            List<Tuple2<Double, String>> top = rddMonthsCoefficient.sortByKey(false).take(50);
+
+            listTopStatesPerMonth.add(new Tuple2<>(fI, top));
+        }
+
+
+        JavaRDD<Tuple2<Integer, List<Tuple2<Double, String>>>> input2 = sparkContext.parallelize(listTopStatesPerMonth);
+
+              /*
+        prendiamo il nostro RDD creato precedentemente e lo trasformiamo in pair rdd cosi ottenuto:
+        <mese><top 50 stati per mese>
+         */
+        JavaPairRDD<Integer, Tuple2<Double, String>> pairRddTopStatesPerMont = input2.
+                flatMapToPair((PairFlatMapFunction<Tuple2<Integer, List<Tuple2<Double, String>>>, Integer, Tuple2<Double, String>>) row -> {
+                    ArrayList<Tuple2<Integer, Tuple2<Double, String>>> res = new ArrayList<>();
+                    for (Tuple2<Double, String> tuple : row._2()) {
+                        res.add(new Tuple2<>(row._1(), tuple));
+                    }
+                    return res.iterator();
+                });
+
+
+        JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> temp4 = pairRddTopStatesPerMont.groupByKey();
+
+
+        JavaRDD<Vector> filtered = temp4.
+                flatMap((FlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Vector>) integerIterableTuple2 -> {
+                    ArrayList<Vector> result5 = new ArrayList<>();
+                    for (Tuple2<Double, String> tuple : integerIterableTuple2._2()) {
+                        Vector a = Vectors.dense(tuple._1());
+                        result5.add(a);
+                    }
+                    return result5.iterator();
+                }).cache();
+
+        KMeansModel clusters = KMeans.train(filtered.rdd(), NUM_CLUSTERS, NUM_ITERATIONS);
+
+
+        System.out.println("\n*****Training*****");
+        int clusterNumber = 0;
+        for (Vector center : clusters.clusterCenters()) {
+            System.out.println("Cluster center for Clsuter " + (clusterNumber++) + " : " + center);
+        }
+        double cost = clusters.computeCost(filtered.rdd());
+        System.out.println("\nCost: " + cost);
+
+        // Evaluate clustering by computing Within Set Sum of Squared Errors
+        double WSSSE = clusters.computeCost(filtered.rdd());
+        System.out.println("Within Set Sum of Squared Errors = " + WSSSE);
+
+        try {
+            FileUtils.forceDelete(new File("KMeansModel"));
+            System.out.println("\nDeleting old model completed.");
+        } catch (IOException ignored) {
+        }
+
+        // Save and load model
+        clusters.save(sparkContext.sc(), "KMeansModel");
+        System.out.println("\rModel saved to KMeansModel/");
+        KMeansModel sameModel = KMeansModel.load(sparkContext.sc(),
+                "KMeansModel");
+
+
+
+        // prediction for test vectors
+        System.out.println("\n*****Prediction*****");
+
+        for(Tuple2<Integer, List<Tuple2<Double, String>>> state: listTopStatesPerMonth){
+            System.out.println("State: " +sameModel.predict(Vectors.dense(512)));
+        }
 
         /*
-        //Finestra scorrevole dei mesi
-        Calendar newInit = data_inizio;
-
-        //Vai alla fine del mese
-        Calendar a = ConvertData.goInitNextMonth(data_inizio);
-        Calendar newFinish = ConvertData.goToEndOfTheMonth(data_inizio);
-        Calendar newFinish = ConvertData.addMonth(data_inizio);
-        Calendar newFinish = ConvertData.nextMonth(data_inizio);
-
-        //Calcolo la differenza dei giorni
-        long noOfDaysBetween  = ChronoUnit.DAYS.between(newInit,newFinish);
-
-        CALCOLO TRENDLINE ();
-
-        //Aggiorno date di inizio e fine
-        newInit = newFinish;
-        newFinish = ConvertData.nextMonth(data_inizio);
-
-
-
-
-                // Extract words within a tweet
-        JavaRDD<Tuple2<String, Integer>> values =
-                weeklyDate.map(line -> new Tuple2<>(((line.getState() != null) ? line.getStato() : line.getRegione()), line.calcolaTrend()));
-
-
+        for (Tuple2<Integer, Iterable<Tuple2<Double, String>>> j : temp4.collect()) {
+            System.out.println(j);
+        }
 
          */
 
-        long fOperations = System.currentTimeMillis();
-        sc.stop();
+
         long finalTime = System.currentTimeMillis();
-        System.out.printf("Total time to complete: %s ms\n", Long.toString(finalTime - initialTime));
+        System.out.printf("Total time to complete: %s ms\n", (finalTime - initialTime));
+
+
     }
+
+    /**
+     * Gestione della persistenza dei risultati del processamento
+     */
+    @Override
+    public void store() {
+
+    }
+
+
 }

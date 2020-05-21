@@ -22,6 +22,9 @@ public class Config extends HashMap<String, Object> implements Serializable {
     public final static String SPARK_LOG_LEVEL = "spark-log-level";
     public final static String DEFAULT_SPARK_LOG_LEVEL = "ERROR";
 
+    public final static String REDIS_HOSTNAME = "redis-hostname";
+    public final static String DEFAULT_REDIS_HOSTNAME = "redis";
+
     public final static String SERIALIZER_KEY = "serializer-key";
     public final static String DEFAULT_SERIALIZER_KEY = "spark.serializer";
 
@@ -41,6 +44,7 @@ public class Config extends HashMap<String, Object> implements Serializable {
         put(SPARK_MASTER, DEFAULT_SPARK_MASTER);
         put(APP_NAME, DEFAULT_APP_NAME);
         put(SPARK_LOG_LEVEL, DEFAULT_SPARK_LOG_LEVEL);
+        put(REDIS_HOSTNAME, DEFAULT_REDIS_HOSTNAME);
         put(SERIALIZER_KEY, DEFAULT_SERIALIZER_KEY);
         put(SERIALIZER_VALUE, DEFAULT_SERIALIZER_VALUE);
 
@@ -74,6 +78,9 @@ public class Config extends HashMap<String, Object> implements Serializable {
         checkNullAndPutString(SPARK_MASTER, properties.get(SPARK_MASTER));
         checkNullAndPutString(APP_NAME, properties.get(APP_NAME));
         checkNullAndPutString(SPARK_LOG_LEVEL, properties.get(SPARK_LOG_LEVEL));
+        checkNullAndPutString(REDIS_HOSTNAME, properties.get(REDIS_HOSTNAME));
+        //checkNullAndPutString(SERIALIZER_KEY, properties.get(SERIALIZER_KEY));
+        //checkNullAndPutString(SERIALIZER_VALUE, properties.get(SERIALIZER_VALUE));
 
         put(PROPERTIES_FILENAME, DEFAULT_PROPERTIES_FILENAME);
     }
@@ -105,6 +112,9 @@ public class Config extends HashMap<String, Object> implements Serializable {
         return (String) get(SPARK_MASTER);
     }
 
+    public String getRedisHostname() {
+        return (String) get(REDIS_HOSTNAME);
+    }
 
     public String getAppName() {
         return (String) get(APP_NAME);
