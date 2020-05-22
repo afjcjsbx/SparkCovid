@@ -30,7 +30,7 @@ import java.util.*;
 public class Query3 implements IQuery {
 
     // KMeans parameters
-    private static int NUM_CLUSTERS = 3;
+    private static int NUM_CLUSTERS = 4;
     private static int NUM_ITERATIONS = 20;
 
 
@@ -83,14 +83,17 @@ public class Query3 implements IQuery {
     }
 
     /**
-     * Esecuzione della query 2.
+     * Esecuzione della query 3.
      * <p>
-     * QUERY 2:
-     * Per ogni continente calcolare la media, deviazione standard, minimo, massimo e
-     * del numero di casi confermati su base settimanale.
-     * Nota: Considerare solo i maggiori 100 stati colpiti, per calcolare gli stati
-     * maggiormente colpiti andiamo a calcolare il coefficiente di trenline utilizzando
-     * una regressione lineare.
+     * QUERY 3:
+     * Per ogni mese usare l'algoritmo di clustering del K-means con (K=4) per
+     * identificare gli stati che appartengono ad ogni cluster rispetto al trend
+     * dei casi confermati.
+     * Nota: Considerare solo i maggiori 50 stati colpiti ogni mese, applicare
+     * l'algoritmo del k-means mese per mese per identificare gli stati che hanno
+     * un trend simile di casi confermati durante quel mese. Comparare le performance
+     * dell'implementazione naive dell'algoritmo con quelle delle l'algoritmo
+     * implementato nella libreria di Spark Mlib o Apache Mahout
      */
     @Override
     public void execute() {
@@ -101,20 +104,19 @@ public class Query3 implements IQuery {
         // Creo un RDD composto da una String che rappresenta il nome dello stato e i relativi dati di quello stato
         JavaPairRDD<String, Covid2Data> rddStateData = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x));
 
-        // Creo un RDD composto da una String che rappresenta il nome dello stato e una Tupla2 che ha come
-        // primo campo i dati relativi a quello stato e come secondo campo il continente a cui quello stato
-        // fa parte
-        //JavaPairRDD<String, Tuple2<Covid2Data, String>> rddContinents = rddStateData.join(rddPairCountryContinent);
-
 
         // Creo un RDD composto da una String che rappresenta il nome del continente e una lista di interi in
         // cui ci sono i casi totali relativi giorno per giorno
         JavaPairRDD<String, ArrayList<Integer>> rdd_region_final = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x.getCases()));
 
 
+
+
+
+
         // Creo un RDD composto da una Tupla2<String, String> che avrà il nome del continente come
-        // primo campo e il numero della settimana come secondo campo, Il valore Integer rappresenta
-        // il numero dei casi relativi per un giorno di quella settimana per ogni stato quindi conterrà
+        // primo campo e il numero del mese come secondo campo, Il valore Integer rappresenta
+        // il numero dei casi relativi per ogni giorno di quel mese per ogni stato quindi conterrà
         // n tuple dove n sono tutti gli stati
         JavaPairRDD<String, ArrayList<Integer>> rddContinentDayByDay = rdd_region_final
                 .reduceByKey((Function2<ArrayList<Integer>, ArrayList<Integer>, ArrayList<Integer>>) (arr1, arr2) -> {
@@ -123,6 +125,7 @@ public class Query3 implements IQuery {
                         sum.add(arr1.get(z) + arr2.get(z));
                     return sum;
                 });
+
 
 
         // Da implementare nel load
@@ -154,6 +157,8 @@ public class Query3 implements IQuery {
                 });
 
 
+
+
         // Raggruppo per chiave : <Stato ,Mese> ottenend un rdd <Stato ,Mese>, Iterable
         // dei nuovi casi del mese giorno per giorno
         JavaPairRDD<Tuple2<String, Integer>, Iterable<Integer>> rddTotalCasesInStateByMonth = rddComplete.groupByKey();
@@ -176,11 +181,15 @@ public class Query3 implements IQuery {
             return new Tuple2<>(month, new Tuple2<>(res, state_name));
         });
 
+
+
+
 /*
         Una volta ottenuti i trend per ogni mese, raggruppiamo per chiave ottenendo un pair rdd composto da:
         <Mese>,<Iterable<Trend,Nome dello stato>>
          */
         JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> resultGrouped = grouped.groupByKey();
+
 
 
         //Definiamo un arrayList contente le tuple del tipo <Numero Mese, Lista di Tuple< Trend, Nome stato >> corrispettivi al mese
@@ -226,78 +235,102 @@ public class Query3 implements IQuery {
         JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> temp4 = pairRddTopStatesPerMont.groupByKey();
 
 
-        List<Tuple2<Integer, Iterable<Tuple2<Double, String>>>> i = temp4.collect();
-        double max = 0;
-        for (Tuple2<Integer, Iterable<Tuple2<Double, String>>> t : i) {
-            for (Tuple2<Double, String> c : t._2) {
 
-                if (c._1() > max) {
-                    max = c._1();
+
+
+
+
+
+
+        List<Tuple2<Integer,Tuple2<String,Integer>>> to_file = new ArrayList<>();
+
+        long iSparkKmeans = System.currentTimeMillis();
+
+
+        for(int month = 0; month < temp4.keys().collect().size(); month++){
+            int finalMonth = month;
+            JavaRDD<Vector> filtered = temp4
+                    .filter(x -> x._1().equals(finalMonth))
+                    .flatMap((FlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Vector>) input13 -> {
+                        ArrayList<Vector> result = new ArrayList<>();
+                        for(Tuple2<Double, String> tupla: input13._2()){
+                            Vector a = Vectors.dense(tupla._1());
+                            result.add(a);
+                        }
+                        return result.iterator();
+                    });
+
+
+            KMeansModel clusters = KMeans.train(filtered.rdd(), NUM_CLUSTERS, NUM_ITERATIONS);
+
+            System.out.println("*****Training*****");
+            int clusterNumber = 0;
+            System.out.println("Clusters for month: " + month);
+            for (Vector center : clusters.clusterCenters()) {
+                System.out.println("Cluster center for Clsuter " + (clusterNumber++) + " : " + center);
+            }
+            double cost = clusters.computeCost(filtered.rdd());
+            System.out.println("\nCost: " + cost);
+
+            // Evaluate clustering by computing Within Set Sum of Squared Errors
+            double WSSSE = clusters.computeCost(filtered.rdd());
+            System.out.println("Within Set Sum of Squared Errors = " + WSSSE);
+
+            try {
+                FileUtils.forceDelete(new File("KMeansModel"));
+                System.out.println("\nDeleting old model completed.");
+            } catch (IOException ignored) {
+            }
+
+            // Save and load model
+            clusters.save(sparkContext.sc(), "KMeansModel");
+            System.out.println("\rModel saved to KMeansModel/");
+            KMeansModel sameModel = KMeansModel.load(sparkContext.sc(),
+                    "KMeansModel");
+
+            // prediction for test vectors
+            System.out.println("\n*****Prediction*****");
+
+
+            List<Iterable<Tuple2<Double, String>>> coefficientState = temp4.filter(x -> x._1().equals(finalMonth)).
+                    map(Tuple2::_2).collect();
+
+            for(Iterable<Tuple2<Double, String>> cf : coefficientState){
+                for(Tuple2<Double, String> t: cf){
+                    to_file.add(new Tuple2<>(month, new Tuple2<>(t._2(), clusters.predict(Vectors.dense(t._1())))));
                 }
             }
-        }
-        System.out.println("Max Value: " + max);
 
-
-        JavaRDD<Vector> filtered = temp4.
-                flatMap((FlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Vector>) integerIterableTuple2 -> {
-                    ArrayList<Vector> result5 = new ArrayList<>();
-                    for (Tuple2<Double, String> tuple : integerIterableTuple2._2()) {
-                        Vector a = Vectors.dense(tuple._1());
-                        result5.add(a);
-                    }
-                    return result5.iterator();
-                }).cache();
-
-        KMeansModel clusters = KMeans.train(filtered.rdd(), NUM_CLUSTERS, NUM_ITERATIONS);
-
-
-        System.out.println("\n*****Training*****");
-        int clusterNumber = 0;
-        for (Vector center : clusters.clusterCenters()) {
-            System.out.println("Cluster center for Clsuter " + (clusterNumber++) + " : " + center);
-        }
-        double cost = clusters.computeCost(filtered.rdd());
-        System.out.println("\nCost: " + cost);
-
-        // Evaluate clustering by computing Within Set Sum of Squared Errors
-        double WSSSE = clusters.computeCost(filtered.rdd());
-        System.out.println("Within Set Sum of Squared Errors = " + WSSSE);
-
-        try {
-            FileUtils.forceDelete(new File("KMeansModel"));
-            System.out.println("\nDeleting old model completed.");
-        } catch (IOException ignored) {
         }
 
-        // Save and load model
-        clusters.save(sparkContext.sc(), "KMeansModel");
-        System.out.println("\rModel saved to KMeansModel/");
-        KMeansModel sameModel = KMeansModel.load(sparkContext.sc(),
-                "KMeansModel");
+        long fSparkKmeans = System.currentTimeMillis();
+        System.out.printf("Total time to compute Spark MLib K-Means: %s ms\n", (fSparkKmeans - iSparkKmeans));
 
 
-
-        // prediction for test vectors
-        System.out.println("\n*****Prediction*****");
-
-        for(Tuple2<Integer, List<Tuple2<Double, String>>> state: listTopStatesPerMonth){
-            System.out.println("State: " +sameModel.predict(Vectors.dense(512)));
+        // <Month, (State, Cluster)>
+        for (Tuple2<Integer, Tuple2<String, Integer>> j : to_file) {
+            System.out.println(j);
         }
 
 
+
+
+
+
+
+
+
+
+/*
 
         NaiveKMeans naiveKMeans = new NaiveKMeans(temp4.values(), NUM_CLUSTERS, NUM_ITERATIONS);
         naiveKMeans.start();
         //naiveKMeans.plotCluster();
         naiveKMeans.plotCentroids();
-        /*
-        for (Tuple2<Integer, Iterable<Tuple2<Double, String>>> j : temp4.collect()) {
-            System.out.println(j);
-        }
 
-         */
 
+
+ */
 
         long finalTime = System.currentTimeMillis();
         System.out.printf("Total time to complete: %s ms\n", (finalTime - initialTime));

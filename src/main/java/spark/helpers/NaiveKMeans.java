@@ -26,9 +26,7 @@ public class NaiveKMeans implements Serializable {
     //Number of Clusters. This metric should be related to the number of points
     private int NUM_CLUSTERS;
     //Number of iterations
-    private int NUM_ITERATIONS;
-    //Number of Points
-    private int NUM_POINTS = 15;
+    private final int NUM_ITERATIONS;
     // Max value of trend
     private double MAX_VALUE;
     //Min and Max X and Y
@@ -37,9 +35,9 @@ public class NaiveKMeans implements Serializable {
     //private JavaPairRDD<Integer, Double> centroids;
     private List<Double> centroids;
 
-    private JavaPairRDD<Integer, Tuple2<Double, String>> points;
+    private JavaPairRDD<Integer, Tuple2<String, Double>> points;
     private JavaRDD<Iterable<Tuple2<Double, String>>> rddin;
-    private JavaPairRDD<Integer, String> rddOutClusters;
+    private JavaPairRDD<String, Integer> rddOutClusters;
 
     public NaiveKMeans(JavaRDD<Iterable<Tuple2<Double, String>>> points, int clusters, int iterations) {
         this.rddin = points;
@@ -119,26 +117,26 @@ public class NaiveKMeans implements Serializable {
 
 
     private void assignCluster() {
-        points = rddin.flatMapToPair((PairFlatMapFunction<Iterable<Tuple2<Double, String>>, Integer, Tuple2<Double, String>>) tuple2s -> {
+        points = rddin.flatMapToPair((PairFlatMapFunction<Iterable<Tuple2<String, Double>>, Integer, Tuple2<String, Double>>) tuple2s -> {
             double max = Double.MAX_VALUE;
             double min;
             int cluster;
             double distance;
 
-            ArrayList<Tuple2<Integer, Tuple2<Double, String>>> res = new ArrayList<>();
+            ArrayList<Tuple2<Integer, Tuple2<String, Double>>> res = new ArrayList<>();
 
-            for (Tuple2<Double, String> t : tuple2s) {
+            for (Tuple2<String, Double> t : tuple2s) {
+                //min = distance(centroids.get(0), t._1());
                 min = max;
                 cluster = 0;
                 for (int i = 0; i < NUM_CLUSTERS; i++) {
-                    distance = distance(centroids.get(0), t._1());
+                    distance = distance(centroids.get(i), t._2());
                     if (distance < min) {
                         min = distance;
                         cluster = i;
                     }
                 }
                 res.add(new Tuple2<>(cluster, t));
-
             }
             return res.iterator();
         });
