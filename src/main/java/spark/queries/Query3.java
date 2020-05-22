@@ -110,10 +110,6 @@ public class Query3 implements IQuery {
         JavaPairRDD<String, ArrayList<Integer>> rdd_region_final = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x.getCases()));
 
 
-
-
-
-
         // Creo un RDD composto da una Tupla2<String, String> che avrà il nome del continente come
         // primo campo e il numero del mese come secondo campo, Il valore Integer rappresenta
         // il numero dei casi relativi per ogni giorno di quel mese per ogni stato quindi conterrà
@@ -125,7 +121,6 @@ public class Query3 implements IQuery {
                         sum.add(arr1.get(z) + arr2.get(z));
                     return sum;
                 });
-
 
 
         // Da implementare nel load
@@ -155,8 +150,6 @@ public class Query3 implements IQuery {
 
                     return result_flat.iterator();
                 });
-
-
 
 
         // Raggruppo per chiave : <Stato ,Mese> ottenend un rdd <Stato ,Mese>, Iterable
@@ -189,7 +182,6 @@ public class Query3 implements IQuery {
         <Mese>,<Iterable<Trend,Nome dello stato>>
          */
         JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> resultGrouped = grouped.groupByKey();
-
 
 
         //Definiamo un arrayList contente le tuple del tipo <Numero Mese, Lista di Tuple< Trend, Nome stato >> corrispettivi al mese
@@ -235,25 +227,18 @@ public class Query3 implements IQuery {
         JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> temp4 = pairRddTopStatesPerMont.groupByKey();
 
 
-
-
-
-
-
-
-
-        List<Tuple2<Integer,Tuple2<String,Integer>>> to_file = new ArrayList<>();
+        List<Tuple2<Integer, Tuple2<String, Integer>>> listMlibResults = new ArrayList<>();
 
         long iSparkKmeans = System.currentTimeMillis();
 
 
-        for(int month = 0; month < temp4.keys().collect().size(); month++){
+        for (int month = 0; month < temp4.keys().collect().size(); month++) {
             int finalMonth = month;
             JavaRDD<Vector> filtered = temp4
                     .filter(x -> x._1().equals(finalMonth))
                     .flatMap((FlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Vector>) input13 -> {
                         ArrayList<Vector> result = new ArrayList<>();
-                        for(Tuple2<Double, String> tupla: input13._2()){
+                        for (Tuple2<Double, String> tupla : input13._2()) {
                             Vector a = Vectors.dense(tupla._1());
                             result.add(a);
                         }
@@ -283,30 +268,78 @@ public class Query3 implements IQuery {
             }
 
             // Save and load model
-            clusters.save(sparkContext.sc(), "KMeansModel");
+            //clusters.save(sparkContext.sc(), "KMeansModel");
             System.out.println("\rModel saved to KMeansModel/");
-            KMeansModel sameModel = KMeansModel.load(sparkContext.sc(),
-                    "KMeansModel");
+            //KMeansModel sameModel = KMeansModel.load(sparkContext.sc(), "KMeansModel");
 
             // prediction for test vectors
-            System.out.println("\n*****Prediction*****");
+            System.out.println("\n*****Prediction for month: " + month + "*****");
 
 
             List<Iterable<Tuple2<Double, String>>> coefficientState = temp4.filter(x -> x._1().equals(finalMonth)).
                     map(Tuple2::_2).collect();
 
-            for(Iterable<Tuple2<Double, String>> cf : coefficientState){
-                for(Tuple2<Double, String> t: cf){
-                    to_file.add(new Tuple2<>(month, new Tuple2<>(t._2(), clusters.predict(Vectors.dense(t._1())))));
+            for (Iterable<Tuple2<Double, String>> cf : coefficientState) {
+                for (Tuple2<Double, String> t : cf) {
+                    listMlibResults.add(new Tuple2<>(month, new Tuple2<>(t._2(), clusters.predict(Vectors.dense(t._1())))));
                 }
             }
+
 
         }
 
         long fSparkKmeans = System.currentTimeMillis();
         System.out.printf("Total time to compute Spark MLib K-Means: %s ms\n", (fSparkKmeans - iSparkKmeans));
 
+        for (Tuple2<Integer, Tuple2<String, Integer>> j : listMlibResults) {
+            System.out.println(j);
+        }
 
+
+        List<Tuple2<Integer, Tuple2<String, Integer>>> listNaiveResults = new ArrayList<>();
+
+        System.out.println("*****Start Naive K-Means*****");
+        long iNaiveKmeans = System.currentTimeMillis();
+
+        // Naive K-Means
+        for (int month = 0; month < temp4.keys().collect().size(); month++) {
+
+            NaiveKMeans naiveKMeans = new NaiveKMeans(temp4.values(), NUM_CLUSTERS, NUM_ITERATIONS);
+            System.out.println("\n*****Prediction for month: " + month + "*****");
+
+            System.out.println("*****Training*****");
+            int clusterNumber = 0;
+            System.out.println("Clusters for month: " + month);
+            for (Double center : naiveKMeans.getCentroids()) {
+                System.out.println("Cluster center for Cluster " + (clusterNumber++) + " : " + center);
+            }
+
+            // prediction for test vectors
+
+            //naiveKMeans.plotCluster();
+
+
+            for (Tuple2<Integer, Tuple2<Double, String>> tuple : naiveKMeans.getClusters().collect()) {
+                listNaiveResults.add(new Tuple2<>(month, new Tuple2<>(tuple._2()._2(), tuple._1())));
+            }
+
+        }
+
+
+        for (Tuple2<Integer, Tuple2<String, Integer>> j : listNaiveResults) {
+            System.out.println(j);
+        }
+
+
+        long fNaiveKmeans = System.currentTimeMillis();
+        System.out.printf("Total time to compute Naive K-Means: %s ms\n", (fNaiveKmeans - iNaiveKmeans));
+
+
+
+
+
+
+/*
         // <Month, (State, Cluster)>
         for (Tuple2<Integer, Tuple2<String, Integer>> j : to_file) {
             System.out.println(j);
@@ -319,9 +352,6 @@ public class Query3 implements IQuery {
 
 
 
-
-
-/*
 
         NaiveKMeans naiveKMeans = new NaiveKMeans(temp4.values(), NUM_CLUSTERS, NUM_ITERATIONS);
         naiveKMeans.start();
