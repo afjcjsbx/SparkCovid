@@ -31,8 +31,8 @@ public class StartProcessing {
         JavaSparkContext sparkContext = sparkProcessor.getSparkContext();
 
         sparkProcessor.addQuery(new Query1(sparkContext));
-        //sparkProcessor.addQuery(new Query2(sparkContext));
-        //sparkProcessor.addQuery(new Query3(sparkContext));
+        sparkProcessor.addQuery(new Query2(sparkContext));
+        sparkProcessor.addQuery(new Query3(sparkContext));
 
         sparkProcessor.startQueries();
 
