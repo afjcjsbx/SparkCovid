@@ -2,12 +2,16 @@ package spark.queries;
 
 import lombok.Getter;
 import model.Covid2Data;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.PairFunction;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import scala.Tuple2;
 import scala.Tuple3;
 import scala.Tuple4;
@@ -21,6 +25,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Query2 implements IQuery {
+
+    private static final Logger log = LogManager.getLogger(Query2.class);
 
     private final JavaSparkContext sparkContext;
 
@@ -209,6 +215,17 @@ public class Query2 implements IQuery {
      */
     @Override
     public void store() {
+
+        this.rddOut.foreachPartition(partition -> partition.forEachRemaining(record -> {
+            try{
+                Jedis jedis = new Jedis("localhost");
+                jedis.select(2);
+            } catch (JedisConnectionException e){
+                e.printStackTrace();
+            }
+
+
+        }));
 
     }
 

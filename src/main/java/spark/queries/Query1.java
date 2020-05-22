@@ -3,7 +3,10 @@ package spark.queries;
 import lombok.Getter;
 import model.Config;
 import model.Covid1Data;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import spark.helpers.Common;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -14,6 +17,8 @@ import scala.Tuple2;
 import utils.*;
 
 public class Query1 implements IQuery {
+
+    private static final Logger log = LogManager.getLogger(Query1.class);
 
     private final JavaSparkContext sparkContext;
 
@@ -107,16 +112,24 @@ public class Query1 implements IQuery {
     public void store() {
 
         this.rddOut.foreachPartition(partition -> partition.forEachRemaining(record -> {
-            Jedis jedis = new Jedis("localhost");
-            jedis.select(0);
+            try{
+                Jedis jedis = new Jedis("localhost");
+                jedis.select(1);
 
-            jedis.set(
-                    record._1().toString(),
-                    String.format(
-                            "%s - old ranking: %s",
-                            record._2()._1(),
-                            record._2()._2()
-                    ));
+                jedis.set(
+                        record._1().toString(),
+                        String.format(
+                                "**Week: %d** AVG Healed: %s, AVG Swads: %s",
+                                record._1(),
+                                record._2()._1(),
+                                record._2()._2()
+                        ));
+
+            } catch (JedisConnectionException e){
+                e.printStackTrace();
+            }
+
+
 
         }));
 

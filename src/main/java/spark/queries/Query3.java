@@ -16,6 +16,7 @@ import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import scala.Tuple2;
 import spark.helpers.Common;
+import spark.helpers.NaiveKMeans;
 import utils.DataParser;
 import utils.LinearRegression;
 import utils.RegionParser;
@@ -23,10 +24,7 @@ import utils.RegionParser;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 
 public class Query3 implements IQuery {
@@ -228,6 +226,19 @@ public class Query3 implements IQuery {
         JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> temp4 = pairRddTopStatesPerMont.groupByKey();
 
 
+        List<Tuple2<Integer, Iterable<Tuple2<Double, String>>>> i = temp4.collect();
+        double max = 0;
+        for (Tuple2<Integer, Iterable<Tuple2<Double, String>>> t : i) {
+            for (Tuple2<Double, String> c : t._2) {
+
+                if (c._1() > max) {
+                    max = c._1();
+                }
+            }
+        }
+        System.out.println("Max Value: " + max);
+
+
         JavaRDD<Vector> filtered = temp4.
                 flatMap((FlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Vector>) integerIterableTuple2 -> {
                     ArrayList<Vector> result5 = new ArrayList<>();
@@ -274,6 +285,12 @@ public class Query3 implements IQuery {
             System.out.println("State: " +sameModel.predict(Vectors.dense(512)));
         }
 
+
+
+        NaiveKMeans naiveKMeans = new NaiveKMeans(temp4.values(), NUM_CLUSTERS, NUM_ITERATIONS);
+        naiveKMeans.start();
+        //naiveKMeans.plotCluster();
+        naiveKMeans.plotCentroids();
         /*
         for (Tuple2<Integer, Iterable<Tuple2<Double, String>>> j : temp4.collect()) {
             System.out.println(j);
