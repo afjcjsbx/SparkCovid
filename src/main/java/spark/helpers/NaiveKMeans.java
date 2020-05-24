@@ -121,8 +121,8 @@ public class NaiveKMeans implements Serializable {
 
     private void assignCluster() {
         points = rddInput.flatMapToPair((PairFlatMapFunction<Iterable<Tuple2<Double, String>>, Integer, Tuple2<Double, String>>) tuple2s -> {
-            double max = Double.MAX_VALUE;
-            double min;
+            double max = MAX_VALUE;
+            double min = MIN_VALUE;
             int cluster;
             double distance;
 
@@ -130,7 +130,7 @@ public class NaiveKMeans implements Serializable {
 
             for (Tuple2<Double, String> t : tuple2s) {
                 //min = distance(centroids.get(0), t._1());
-                min = max;
+                min = MAX_VALUE;
                 cluster = 0;
                 for (int i = 0; i < NUM_CLUSTERS; i++) {
                     distance = distance(centroids.get(i), t._1());
@@ -145,22 +145,9 @@ public class NaiveKMeans implements Serializable {
         });
     }
 
-/*
-    private void calculateCentroids() {
-        // Mi calcolo i nuovi centroidi e li vado ad aggiornare
-        for (Tuple2<Integer, Tuple2<Double, String>> p : points.distinct().collect()) {
-            for (int i = 0; i < centroids.size(); i++)
-                if (p._1() == i) {
-                    centroids.set(i, p._2()._1());
-                }
-        }
 
-    }
-
- */
 
     private void calculateCentroids() {
-        System.out.println("centroids " + centroids);
 
         // Mi mappo tutti i trend per ogni cluster
         JavaPairRDD<Integer, Double> rddClusterTrends = points.mapToPair(x -> new Tuple2<>(x._1(), x._2()._1()));
@@ -168,11 +155,12 @@ public class NaiveKMeans implements Serializable {
         JavaPairRDD<Integer, Double> rddTrendSum = rddClusterTrends.reduceByKey(Double::sum);
 
 
-        //Creo un RDD con chiave cluster e valore  generico, necessario per il count di elementi che fanno parte del cluster
-        JavaPairRDD<Integer, Double> cluster_count = rddClusterTrends.mapToPair(x -> new Tuple2<>(x._1(), 1.0));
-        JavaPairRDD<Integer,Double> count=cluster_count.reduceByKey(Double::sum);
+        // Creo un RDD appoggio per contare quanti sono i punti per ogni cluster
+        JavaPairRDD<Integer, Double> rddCountPointsPerCluster = rddClusterTrends
+                        .mapToPair(x -> new Tuple2<>(x._1(), 1.0))
+                        .reduceByKey(Double::sum);
 
-        JavaPairRDD<Integer, Tuple2<Double, Double>> join_fox0 = rddTrendSum.join(count);
+        JavaPairRDD<Integer, Tuple2<Double, Double>> join_fox0 = rddTrendSum.join(rddCountPointsPerCluster);
 
         //RDD con chiave il cluster e valore il nuovo centroide
         JavaPairRDD<Integer, Double> centroide_nuovo_final = join_fox0.mapToPair(x -> new Tuple2<>(x._1(), ((x._2()._1())/x._2()._2())));

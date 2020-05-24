@@ -304,7 +304,10 @@ public class Query3 implements IQuery {
         // Naive K-Means
         for (int month = 0; month < temp4.keys().collect().size(); month++) {
 
-            NaiveKMeans naiveKMeans = new NaiveKMeans(temp4.values(), NUM_CLUSTERS, NUM_ITERATIONS);
+            int finalMonth = month;
+            JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> rddMontlyTrends = temp4.filter(x -> x._1().equals(finalMonth));
+
+            NaiveKMeans naiveKMeans = new NaiveKMeans(rddMontlyTrends.values(), NUM_CLUSTERS, NUM_ITERATIONS);
             System.out.println("\n*****Prediction for month: " + month + "*****");
 
             System.out.println("*****Training*****");
