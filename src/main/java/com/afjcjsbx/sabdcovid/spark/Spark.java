@@ -1,7 +1,7 @@
-package spark;
+package com.afjcjsbx.sabdcovid.spark;
 
 import lombok.NonNull;
-import model.Config;
+import com.afjcjsbx.sabdcovid.model.Config;
 import org.apache.avro.generic.GenericData;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -17,6 +17,9 @@ public class Spark extends AbstractSpark {
                 //.setMaster(config.getSparkMaster())
                 .setMaster("local")
                 .setAppName(config.getAppName())
+                .setAppName("SparkCovid")
+                .set("fs.default.name", "hdfs://localhost:54310")
+                .set("fs.defaultFS", "hdfs://master:54310")
                 .set(config.getSerializerKey(), config.getSerializerValue())
                 .registerKryoClasses(new Class[]{GenericData.class, GenericData.Record.class});
     }

@@ -1,8 +1,8 @@
-package utils;
+package com.afjcjsbx.sabdcovid.utils;
 
-import model.Covid1Data;
-import model.Covid2Data;
-import enums.Continent;
+import com.afjcjsbx.sabdcovid.model.Covid1Data;
+import com.afjcjsbx.sabdcovid.model.Covid2Data;
+import com.afjcjsbx.sabdcovid.enums.Continent;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;

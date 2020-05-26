@@ -1,32 +1,25 @@
-package spark.queries;
+package com.afjcjsbx.sabdcovid.spark.queries;
 
 import lombok.Getter;
-import model.Covid2Data;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import com.afjcjsbx.sabdcovid.model.Config;
+import com.afjcjsbx.sabdcovid.model.Covid2Data;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.PairFunction;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.exceptions.JedisConnectionException;
 import scala.Tuple2;
-import scala.Tuple3;
-import scala.Tuple4;
-import spark.helpers.Common;
-import utils.DataParser;
-import utils.LinearRegression;
-import utils.RegionParser;
+import com.afjcjsbx.sabdcovid.spark.helpers.Common;
+import com.afjcjsbx.sabdcovid.utils.DataParser;
+import com.afjcjsbx.sabdcovid.utils.LinearRegression;
+import com.afjcjsbx.sabdcovid.utils.RegionParser;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Query2 implements IQuery {
-
-    private static final Logger log = LogManager.getLogger(Query2.class);
 
     private final JavaSparkContext sparkContext;
 
@@ -37,8 +30,6 @@ public class Query2 implements IQuery {
     @Getter
     private JavaPairRDD<String, String> rddPairCountryContinent;
 
-    private static String datasetPath = "src/main/resources/dataset2.csv";
-    private static String regionPath = "src/main/resources/country_continent.csv";
 
 
     public Query2(JavaSparkContext sparkContext) {
@@ -53,7 +44,7 @@ public class Query2 implements IQuery {
 
         long iParseFile = System.currentTimeMillis();
 
-        JavaRDD<String> input = sparkContext.textFile(datasetPath);
+        JavaRDD<String> input = sparkContext.textFile(Config.PATH_DATASET_2);
         String header = input.first();
 
 
@@ -66,7 +57,7 @@ public class Query2 implements IQuery {
 
 
         //Load RDD regions mapping
-        JavaRDD<String> rddRegions = sparkContext.textFile(regionPath);
+        JavaRDD<String> rddRegions = sparkContext.textFile(Config.PATH_COUNTRY_CONTINENT);
         String headerRegion = rddRegions.first();
         rddRegions = rddRegions.filter(x->!x.equals(headerRegion));
         rddPairCountryContinent = rddRegions
@@ -138,7 +129,7 @@ public class Query2 implements IQuery {
 
 
         // Da implementare nel load
-        JavaRDD<String> input = sparkContext.textFile(datasetPath);
+        JavaRDD<String> input = sparkContext.textFile(Config.PATH_DATASET_2);
         String header = input.first();
         String[] cols = header.split(",");
         ArrayList<String> dates = new ArrayList<>(Arrays.asList(cols).subList(4, cols.length));
@@ -174,10 +165,10 @@ public class Query2 implements IQuery {
 
 
         // RDD che continene una (Tupla2(Continente, Settimana), MaxNumeroDiCasiInUnGiornoDiQuellaSettimana)
-        JavaPairRDD<Tuple2<String, String>,Integer> maxContinentTotalCasesPerWeek = rddComplete.reduceByKey(Math::max);
+        JavaPairRDD<Tuple2<String, String>, Integer> maxContinentTotalCasesPerWeek = rddComplete.reduceByKey(Math::max);
 
         // RDD che continene una (Tupla2(Continente, Settimana), MinNumeroDiCasiInUnGiornoDiQuellaSettimana)
-        JavaPairRDD<Tuple2<String, String>,Integer> minContinentTotalCasesPerWeek = rddComplete.reduceByKey(Math::min);
+        JavaPairRDD<Tuple2<String, String>, Integer> minContinentTotalCasesPerWeek = rddComplete.reduceByKey(Math::min);
 
 
 
@@ -187,11 +178,11 @@ public class Query2 implements IQuery {
 
         JavaPairRDD<Tuple2<String, String>, Tuple2<Integer, Integer>> joinres = count.join(continentTotalCasesPerWeek);
 
-        JavaPairRDD <Tuple2<String,String>,Double> average= joinres.mapToPair(x-> new Tuple2<>(x._1(), Double.parseDouble(String.valueOf(x._2()._2() / x._2()._1()))));
+        JavaPairRDD <Tuple2<String,String>,Double> averageContinentCasesPerWeek = joinres.mapToPair(x-> new Tuple2<>(x._1(), Double.parseDouble(String.valueOf(x._2()._2() / x._2()._1()))));
 
 
         // RDD che continene una (Tupla2(Continente, Settimana), DeviazioneStandardPerQuellaSettimana)
-        JavaPairRDD<Tuple2<String,String>,Double> rddStdDev = average.join(rddComplete)
+        JavaPairRDD<Tuple2<String,String>,Double> stdDevContinentPerWeek = averageContinentCasesPerWeek.join(rddComplete)
                 .mapToPair(x->new Tuple2<>(x._1(), Math.pow(x._2()._1()-x._2()._2(), 2)))
                 .reduceByKey(Double::sum).join(count)
                 .mapToPair(x->new Tuple2<>(x._1(),Math.sqrt(x._2()._1()/x._2()._2())));
@@ -199,9 +190,9 @@ public class Query2 implements IQuery {
 
 
 
-        for (Tuple2<Tuple2<String, String>, Double> j : rddStdDev.collect()){
-            System.out.println(j);
-        }
+        JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> result_final =
+                maxContinentTotalCasesPerWeek.join(minContinentTotalCasesPerWeek).join(averageContinentCasesPerWeek).join(stdDevContinentPerWeek);
+
 
 
         long finalTime = System.currentTimeMillis();
@@ -216,6 +207,7 @@ public class Query2 implements IQuery {
     @Override
     public void store() {
 
+        /*
         this.rddOut.foreachPartition(partition -> partition.forEachRemaining(record -> {
             try{
                 Jedis jedis = new Jedis("localhost");
@@ -226,6 +218,8 @@ public class Query2 implements IQuery {
 
 
         }));
+
+         */
 
     }
 

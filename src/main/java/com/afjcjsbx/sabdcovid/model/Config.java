@@ -1,4 +1,4 @@
-package model;
+package com.afjcjsbx.sabdcovid.model;
 
 import lombok.Cleanup;
 import lombok.NonNull;
@@ -9,27 +9,31 @@ import java.util.Properties;
 
 public class Config extends HashMap<String, Object> implements Serializable {
 
-    public final static String DATA_STORE = "data-store";
-    public final static String DEFAULT_DATA_STORE = "hdfs://hdfs-namenode:54310";
+    public static String PATH_DATASET_1 = "hdfs://localhost:54310/csv_datasets/dataset1.csv";
+    public static String PATH_DATASET_2 = "hdfs://localhost:54310/csv_datasets/dataset2.csv";
+    public static String PATH_COUNTRY_CONTINENT = "hdfs://localhost:54310/csv_datasets/country_continent.csv";
 
-    public final static String SPARK_MASTER = "spark-master";
-    //public final static String DEFAULT_SPARK_MASTER = "spark://spark:4040";
+    public final static String DATA_STORE = "master";
+    public final static String DEFAULT_DATA_STORE = "hdfs://localhost:54310";
+
+    public final static String SPARK_MASTER = "com.afjcjsbx.sabdcovid.spark-master";
+    //public final static String DEFAULT_SPARK_MASTER = "com.afjcjsbx.sabdcovid.spark://com.afjcjsbx.sabdcovid.spark:4040";
     public final static String DEFAULT_SPARK_MASTER = "http://PC-Mauro:4040";
 
     public final static String APP_NAME = "app-name";
     public final static String DEFAULT_APP_NAME = "SparkQueries";
 
-    public final static String SPARK_LOG_LEVEL = "spark-log-level";
+    public final static String SPARK_LOG_LEVEL = "com.afjcjsbx.sabdcovid.spark-log-level";
     public final static String DEFAULT_SPARK_LOG_LEVEL = "ERROR";
 
     public final static String REDIS_HOSTNAME = "redis-hostname";
     public final static String DEFAULT_REDIS_HOSTNAME = "redis";
 
     public final static String SERIALIZER_KEY = "serializer-key";
-    public final static String DEFAULT_SERIALIZER_KEY = "spark.serializer";
+    public final static String DEFAULT_SERIALIZER_KEY = "com.afjcjsbx.sabdcovid.spark.serializer";
 
     public final static String SERIALIZER_VALUE = "serializer-value";
-    public final static String DEFAULT_SERIALIZER_VALUE = "org.apache.spark.serializer.KryoSerializer";
+    public final static String DEFAULT_SERIALIZER_VALUE = "org.apache.com.afjcjsbx.sabdcovid.spark.serializer.KryoSerializer";
 
     public static final String PROPERTIES_FILENAME = "properties-filename";
     public static final String DEFAULT_PROPERTIES_FILENAME = "conf.properties";

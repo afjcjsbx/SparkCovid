@@ -1,24 +1,20 @@
-package spark.queries;
+package com.afjcjsbx.sabdcovid.spark.queries;
 
 import lombok.Getter;
-import model.Config;
-import model.Covid1Data;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.exceptions.JedisConnectionException;
-import spark.helpers.Common;
+import com.afjcjsbx.sabdcovid.model.Config;
+import com.afjcjsbx.sabdcovid.model.Covid1Data;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.util.StatCounter;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import scala.Tuple2;
-import utils.*;
+import com.afjcjsbx.sabdcovid.spark.helpers.Common;
+import com.afjcjsbx.sabdcovid.utils.DataParser;
 
 public class Query1 implements IQuery {
-
-    private static final Logger log = LogManager.getLogger(Query1.class);
 
     private final JavaSparkContext sparkContext;
 
@@ -27,7 +23,6 @@ public class Query1 implements IQuery {
     @Getter
     private JavaPairRDD<Integer, Tuple2<Double, Double>> rddOut;
 
-    private static String datasetPath = "src/main/resources/dataset1.csv";
 
     public Query1(JavaSparkContext sparkContext) {
         this.sparkContext = sparkContext;
@@ -39,7 +34,7 @@ public class Query1 implements IQuery {
 
         long iParseFile = System.currentTimeMillis();
 
-        JavaRDD<String> input = sparkContext.textFile(datasetPath);
+        JavaRDD<String> input = sparkContext.textFile(Config.PATH_DATASET_1);
         String header = input.first();
 
         //get ther other lines of csv file
@@ -47,7 +42,7 @@ public class Query1 implements IQuery {
         rddIn = otherLines.map(line -> DataParser.parseCSV(line));
 
         long fParseFile = System.currentTimeMillis();
-        System.out.printf("Total time to parse files: %s ms\n", Long.toString(fParseFile - iParseFile));
+        System.out.printf("Total time to parse files: %s ms\n", (fParseFile - iParseFile));
     }
 
     /**

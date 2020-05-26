@@ -1,4 +1,4 @@
-package spark;
+package com.afjcjsbx.sabdcovid.spark;
 
 import com.clearspring.analytics.util.Lists;
 import lombok.Getter;
@@ -6,7 +6,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
-import spark.queries.IQuery;
+import com.afjcjsbx.sabdcovid.spark.queries.IQuery;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package model;
+package com.afjcjsbx.sabdcovid.model;
 
 import java.io.Serializable;
 

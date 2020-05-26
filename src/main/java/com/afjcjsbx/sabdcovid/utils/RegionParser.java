@@ -1,6 +1,6 @@
-package utils;
+package com.afjcjsbx.sabdcovid.utils;
 
-import model.Region;
+import com.afjcjsbx.sabdcovid.model.Region;
 
 import java.io.Serializable;
 

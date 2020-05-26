@@ -1,4 +1,4 @@
-package utils;
+package com.afjcjsbx.sabdcovid.utils;
 
 import java.util.Calendar;
 

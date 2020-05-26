@@ -7,7 +7,7 @@
  * 2015
  *
  */
-package spark.helpers;
+package com.afjcjsbx.sabdcovid.spark.helpers;
 
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;

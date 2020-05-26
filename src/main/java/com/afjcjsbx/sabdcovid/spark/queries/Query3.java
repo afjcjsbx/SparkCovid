@@ -1,7 +1,8 @@
-package spark.queries;
+package com.afjcjsbx.sabdcovid.spark.queries;
 
 import lombok.Getter;
-import model.Covid2Data;
+import com.afjcjsbx.sabdcovid.model.Config;
+import com.afjcjsbx.sabdcovid.model.Covid2Data;
 import org.apache.commons.io.FileUtils;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -15,14 +16,13 @@ import org.apache.spark.mllib.clustering.KMeansModel;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import scala.Tuple2;
-import spark.helpers.Common;
-import spark.helpers.NaiveKMeans;
-import utils.DataParser;
-import utils.LinearRegression;
-import utils.RegionParser;
+import com.afjcjsbx.sabdcovid.spark.helpers.Common;
+import com.afjcjsbx.sabdcovid.spark.helpers.NaiveKMeans;
+import com.afjcjsbx.sabdcovid.utils.DataParser;
+import com.afjcjsbx.sabdcovid.utils.LinearRegression;
+import com.afjcjsbx.sabdcovid.utils.RegionParser;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
@@ -43,8 +43,6 @@ public class Query3 implements IQuery {
     @Getter
     private JavaPairRDD<String, String> rddPairCountryContinent;
 
-    private static String datasetPath = "src/main/resources/dataset2.csv";
-    private static String regionPath = "src/main/resources/country_continent.csv";
 
 
     public Query3(JavaSparkContext sparkContext) {
@@ -59,7 +57,7 @@ public class Query3 implements IQuery {
 
         long iParseFile = System.currentTimeMillis();
 
-        JavaRDD<String> input = sparkContext.textFile(datasetPath);
+        JavaRDD<String> input = sparkContext.textFile(Config.PATH_DATASET_2);
         String header = input.first();
 
 
@@ -70,7 +68,7 @@ public class Query3 implements IQuery {
 
 
         //Load RDD regions mapping
-        JavaRDD<String> rddRegions = sparkContext.textFile(regionPath);
+        JavaRDD<String> rddRegions = sparkContext.textFile(Config.PATH_COUNTRY_CONTINENT);
         String headerRegion = rddRegions.first();
         rddRegions = rddRegions.filter(x -> !x.equals(headerRegion));
         rddPairCountryContinent = rddRegions
@@ -124,7 +122,7 @@ public class Query3 implements IQuery {
 
 
         // Da implementare nel load
-        JavaRDD<String> input = sparkContext.textFile(datasetPath);
+        JavaRDD<String> input = sparkContext.textFile(Config.PATH_DATASET_2);
         String header = input.first();
         String[] cols = header.split(",");
         ArrayList<String> dates = new ArrayList<>(Arrays.asList(cols).subList(4, cols.length));
@@ -263,11 +261,11 @@ public class Query3 implements IQuery {
 
             try {
                 FileUtils.forceDelete(new File("KMeansModel"));
-                System.out.println("\nDeleting old model completed.");
+                System.out.println("\nDeleting old com.afjcjsbx.sabdcovid.model completed.");
             } catch (IOException ignored) {
             }
 
-            // Save and load model
+            // Save and load com.afjcjsbx.sabdcovid.model
             //clusters.save(sparkContext.sc(), "KMeansModel");
             System.out.println("\rModel saved to KMeansModel/");
             //KMeansModel sameModel = KMeansModel.load(sparkContext.sc(), "KMeansModel");
@@ -317,10 +315,6 @@ public class Query3 implements IQuery {
                 System.out.println("Cluster center for Cluster " + (clusterNumber++) + " : " + center);
             }
 
-            // prediction for test vectors
-
-            //naiveKMeans.plotCluster();
-
 
             for (Tuple2<Integer, Tuple2<Double, String>> tuple : naiveKMeans.getClusters().collect()) {
                 listNaiveResults.add(new Tuple2<>(month, new Tuple2<>(tuple._2()._2(), tuple._1())));
@@ -340,34 +334,8 @@ public class Query3 implements IQuery {
 
 
 
-
-
-/*
-        // <Month, (State, Cluster)>
-        for (Tuple2<Integer, Tuple2<String, Integer>> j : to_file) {
-            System.out.println(j);
-        }
-
-
-
-
-
-
-
-
-
-        NaiveKMeans naiveKMeans = new NaiveKMeans(temp4.values(), NUM_CLUSTERS, NUM_ITERATIONS);
-        naiveKMeans.start();
-        //naiveKMeans.plotCluster();
-        naiveKMeans.plotCentroids();
-
-
-
- */
-
         long finalTime = System.currentTimeMillis();
         System.out.printf("Total time to complete: %s ms\n", (finalTime - initialTime));
-
 
     }
 

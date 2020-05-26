@@ -1,4 +1,4 @@
-package spark.queries;
+package com.afjcjsbx.sabdcovid.spark.queries;
 
 public interface IQuery {
 

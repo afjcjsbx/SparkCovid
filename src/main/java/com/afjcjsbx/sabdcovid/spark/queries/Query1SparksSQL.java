@@ -1,4 +1,4 @@
-package spark.queries;
+package com.afjcjsbx.sabdcovid.spark.queries;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
@@ -12,8 +12,8 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import scala.Tuple3;
-import model.Covid1Data;
-import utils.DataParser;
+import com.afjcjsbx.sabdcovid.model.Covid1Data;
+import com.afjcjsbx.sabdcovid.utils.DataParser;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -32,7 +32,7 @@ public class Query1SparksSQL {
         SparkConf conf = new SparkConf()
                 .setMaster("local")
                 .setAppName("Hello World");
-        conf.set("spark.driver.bindAddress", "127.0.0.1");
+        conf.set("com.afjcjsbx.sabdcovid.spark.driver.bindAddress", "127.0.0.1");
 
         JavaSparkContext sc = new JavaSparkContext(conf);
 
@@ -40,7 +40,7 @@ public class Query1SparksSQL {
         SparkSession spark = SparkSession
                 .builder()
                 .appName("Java Spark SQL query1").master("local")
-                //.config("spark.some.config.option", "some-value")
+                //.config("com.afjcjsbx.sabdcovid.spark.some.config.option", "some-value")
                 .getOrCreate();
 
 
@@ -63,7 +63,7 @@ public class Query1SparksSQL {
 
         Dataset<Row> results = spark.sql("SELECT date, cared, swabds FROM query1");
         //results.createOrReplaceTempView("temp");
-        //Dataset<Row> sqlDF = spark.sql("SELECT DISTINCT house_id FROM temp WHERE sum >= 350 ");
+        //Dataset<Row> sqlDF = com.afjcjsbx.sabdcovid.spark.sql("SELECT DISTINCT house_id FROM temp WHERE sum >= 350 ");
 
 
         results.show();

@@ -1,4 +1,4 @@
-package utils;
+package com.afjcjsbx.sabdcovid.utils;
 
 import java.io.Serializable;
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.List;
  * That is, it fits a straight line <em>y</em> = &alpha; + &beta; <em>x</em>,
  * (where <em>y</em> is the response variable, <em>x</em> is the predictor variable,
  * &alpha; is the <em>y-intercept</em>, and &beta; is the <em>slope</em>)
- * that minimizes the sum of squared residuals of the linear regression model.
+ * that minimizes the sum of squared residuals of the linear regression com.afjcjsbx.sabdcovid.model.
  * It also computes associated statistics, including the coefficient of
  * determination <em>R</em><sup>2</sup> and the standard deviation of the
  * estimates for the slope and <em>y</em>-intercept.
@@ -130,9 +130,9 @@ public class LinearRegression implements Serializable {
     }
 
     /**
-     * Returns a string representation of the simple linear regression model.
+     * Returns a string representation of the simple linear regression com.afjcjsbx.sabdcovid.model.
      *
-     * @return a string representation of the simple linear regression model,
+     * @return a string representation of the simple linear regression com.afjcjsbx.sabdcovid.model,
      * including the best-fit line and the coefficient of determination
      * <em>R</em><sup>2</sup>
      */

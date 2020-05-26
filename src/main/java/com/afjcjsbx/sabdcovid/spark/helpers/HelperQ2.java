@@ -1,4 +1,4 @@
-package spark.helpers;
+package com.afjcjsbx.sabdcovid.spark.helpers;
 
 import org.apache.spark.api.java.function.Function2;
 
