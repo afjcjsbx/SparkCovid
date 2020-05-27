@@ -16,6 +16,7 @@ import com.afjcjsbx.sabdcovid.spark.helpers.Common;
 import com.afjcjsbx.sabdcovid.utils.DataParser;
 import com.afjcjsbx.sabdcovid.utils.LinearRegression;
 import com.afjcjsbx.sabdcovid.utils.RegionParser;
+import scala.Tuple4;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,9 +29,9 @@ public class Query2 implements IQuery {
     @Getter
     private JavaRDD<Covid2Data> rddIn;
     @Getter
-    private JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> rddOut;
+    private JavaPairRDD<Tuple2<String, String>, Tuple4<Integer, Integer, Double, Double>> rddOut;
     @Getter
-    private JavaPairRDD<String, String> rddPairCountryContinent;
+    private JavaPairRDD<String, String> rddPairCountryContinent;    
 
 
 
@@ -190,12 +191,11 @@ public class Query2 implements IQuery {
                 .mapToPair(x->new Tuple2<>(x._1(), Math.sqrt(x._2()._1() / x._2()._2())));
 
 
+        JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> rddTRansition = maxContinentTotalCasesPerWeek.join(minContinentTotalCasesPerWeek).join(averageStateCasesPerWeek).join(stdDevContinentPerWeek);
 
 
-        rddOut = maxContinentTotalCasesPerWeek.join(minContinentTotalCasesPerWeek).join(averageStateCasesPerWeek).join(stdDevContinentPerWeek);
-        for(Tuple2<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> s : rddOut.collect()){
-            System.out.println(s);
-        }
+
+        rddOut = rddTRansition.mapToPair(x-> new Tuple2<>(x._1(), new Tuple4<>(x._2()._1()._1()._1(), x._2()._1()._1()._2(), x._2()._1()._2(), x._2()._2())));
 
 
         long finalTime = System.currentTimeMillis();
@@ -218,15 +218,13 @@ public class Query2 implements IQuery {
                 jedis.select(2);
 
                 jedis.set(
-                        "State :" + record._1()._1() + " Week: " +record._1()._2(),
+                        record._1().toString(),
                         String.format(
-                                "** State: %s - Week: %s ** Max: %s, Min: %s, AVG: %s, STD: %s",
-                                record._1()._1(),
-                                record._1()._2(),
-                                record._2()._1()._1()._1(),
-                                record._2()._1()._1()._2(),
-                                record._2()._1()._2(),
-                                record._2()._2()
+                                "Max: %s, Min: %s, AVG: %s, STD: %s",
+                                record._2()._1(),
+                                record._2()._2(),
+                                record._2()._3(),
+                                record._2()._4()
                         ));
 
             } catch (JedisConnectionException e){
