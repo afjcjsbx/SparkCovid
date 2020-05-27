@@ -4,14 +4,30 @@ import lombok.Cleanup;
 import lombok.NonNull;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Properties;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 public class Config extends HashMap<String, Object> implements Serializable {
+
+    public static int WEEK_OFFSET = 0; // Sostituire con 9 per far coincidere la settimana di inizio del dataset con la prima settimana
 
     public static String PATH_DATASET_1 = "hdfs://localhost:54310/csv_datasets/dataset1.csv";
     public static String PATH_DATASET_2 = "hdfs://localhost:54310/csv_datasets/dataset2.csv";
     public static String PATH_COUNTRY_CONTINENT = "hdfs://localhost:54310/csv_datasets/country_continent.csv";
+
+    public static String OUTPUT_DIR = "hdfs://localhost:54310/results/";
+
+    public static String PATH_RESULT_QUERY_1 = OUTPUT_DIR + "resultQuery1";
+    public static String PATH_RESULT_QUERY_2 = OUTPUT_DIR + "resultQuery2";
+    public static String PATH_RESULT_QUERY_3_MLIB = OUTPUT_DIR + "resultQuery3Mlib";
+    public static String PATH_RESULT_QUERY_3_NAIVE = OUTPUT_DIR + "resultQuery3Naive";
+
 
     public final static String DATA_STORE = "master";
     public final static String DEFAULT_DATA_STORE = "hdfs://localhost:54310";
@@ -147,6 +163,25 @@ public class Config extends HashMap<String, Object> implements Serializable {
     public String getConfigurationFilename() {
         return (String) get(PROPERTIES_FILENAME);
     }
+
+    /**
+     * To configure the file system as per the Hadoop Configuration
+     * @return hadoop file system instance
+     */
+    public static FileSystem configureFileSystem() {
+
+        Configuration configuration = new Configuration();
+        FileSystem hdfs = null;
+        try {
+            hdfs = FileSystem.get(new URI(DEFAULT_DATA_STORE), configuration);
+        } catch (IOException | URISyntaxException e) {
+            e.printStackTrace();
+        }
+
+        return hdfs;
+    }
+
+
 
     @Override
     public String toString() {

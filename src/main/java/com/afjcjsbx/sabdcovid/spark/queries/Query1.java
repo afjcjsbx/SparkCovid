@@ -39,10 +39,10 @@ public class Query1 implements IQuery {
 
         //get ther other lines of csv file
         JavaRDD<String> otherLines = input.filter(row -> !row.equals(header));
-        rddIn = otherLines.map(line -> DataParser.parseCSV(line));
+        rddIn = otherLines.map(DataParser::parseCSV);
 
         long fParseFile = System.currentTimeMillis();
-        System.out.printf("Total time to parse files: %s ms\n", (fParseFile - iParseFile));
+        System.out.printf("Total time to parse files in Query 1: %s ms\n", (fParseFile - iParseFile));
     }
 
     /**
@@ -60,8 +60,7 @@ public class Query1 implements IQuery {
         // Creo un RDD composto da un Integer che mi rappresenta il numero della settimana e il
         // secondo campo mantiene i dati relativi a quella settimana
         JavaPairRDD<Integer, Covid1Data> pair = rddIn.mapToPair((PairFunction<Covid1Data, Integer, Covid1Data>) value -> {
-            int initial_week = 9;
-            int week = Common.getWeekFrom(value.getData()) - initial_week;
+            int week = Common.getWeekFrom(value.getData()) - Config.WEEK_OFFSET;
 
             return new Tuple2<>(week, value);
         }).cache();
@@ -93,18 +92,15 @@ public class Query1 implements IQuery {
         rddOut = rddWeeklyAvgHealed.join(rddWeeklyAvgSwabds).sortByKey();
 
 
-        for (Tuple2<Integer, Tuple2<Double, Double>> string : rddOut.collect()) {
-            System.out.println(string._1() + " " + string._2()._1() + " " + string._2()._2());
-        }
-
 
         long finalTime = System.currentTimeMillis();
-        System.out.printf("Total time to complete: %s ms\n", (finalTime - initialTime));
+        System.out.printf("Total time to complete Query 1: %s ms\n", (finalTime - initialTime));
 
     }
 
     @Override
     public void store() {
+        rddOut.saveAsTextFile(Config.PATH_RESULT_QUERY_1);
 
         this.rddOut.foreachPartition(partition -> partition.forEachRemaining(record -> {
             try{

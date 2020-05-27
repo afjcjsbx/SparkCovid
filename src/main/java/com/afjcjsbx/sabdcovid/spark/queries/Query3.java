@@ -15,6 +15,8 @@ import org.apache.spark.mllib.clustering.KMeans;
 import org.apache.spark.mllib.clustering.KMeansModel;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import scala.Tuple2;
 import com.afjcjsbx.sabdcovid.spark.helpers.Common;
 import com.afjcjsbx.sabdcovid.spark.helpers.NaiveKMeans;
@@ -39,7 +41,9 @@ public class Query3 implements IQuery {
     @Getter
     private JavaRDD<Covid2Data> rddIn;
     @Getter
-    private JavaPairRDD<Tuple2<String, Integer>, Integer> rddOut;
+    private JavaRDD<Tuple2<Integer, Tuple2<String, Integer>>> rddOutMlib;
+    @Getter
+    private JavaRDD<Tuple2<Integer, Tuple2<String, Integer>>> rddOutNaive;
     @Getter
     private JavaPairRDD<String, String> rddPairCountryContinent;
 
@@ -75,7 +79,7 @@ public class Query3 implements IQuery {
                 .mapToPair(x -> new Tuple2<>(RegionParser.parseCSVRegion(x).getCountry(), RegionParser.parseCSVRegion(x).getContinent()));
 
         long fParseFile = System.currentTimeMillis();
-        System.out.printf("Total time to parse files: %s ms\n", (fParseFile - iParseFile));
+        System.out.printf("Total time to parse files in Query 3: %s ms\n", (fParseFile - iParseFile));
 
 
     }
@@ -175,14 +179,13 @@ public class Query3 implements IQuery {
 
 
 
-/*
-        Una volta ottenuti i trend per ogni mese, raggruppiamo per chiave ottenendo un pair rdd composto da:
-        <Mese>,<Iterable<Trend,Nome dello stato>>
-         */
+
+        // Raggrupiamo creando un rdd contenente per chiave i mesi e per valore un iterable con i trend
+        // per ogni stato dei maggiori 50 precedentemente calcolati
         JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> resultGrouped = grouped.groupByKey();
 
 
-        //Definiamo un arrayList contente le tuple del tipo <Numero Mese, Lista di Tuple< Trend, Nome stato >> corrispettivi al mese
+        // Definiamo un arrayList contente le tuple del tipo <Numero Mese, Lista di Tuple< Trend, Nome stato >> corrispettivi al mese
         List<Tuple2<Integer, List<Tuple2<Double, String>>>> listTopStatesPerMonth = new ArrayList<>();
 
 
@@ -208,10 +211,9 @@ public class Query3 implements IQuery {
 
         JavaRDD<Tuple2<Integer, List<Tuple2<Double, String>>>> input2 = sparkContext.parallelize(listTopStatesPerMonth);
 
-              /*
-        prendiamo il nostro RDD creato precedentemente e lo trasformiamo in pair rdd cosi ottenuto:
-        <mese><top 50 stati per mese>
-         */
+
+
+
         JavaPairRDD<Integer, Tuple2<Double, String>> pairRddTopStatesPerMont = input2.
                 flatMapToPair((PairFlatMapFunction<Tuple2<Integer, List<Tuple2<Double, String>>>, Integer, Tuple2<Double, String>>) row -> {
                     ArrayList<Tuple2<Integer, Tuple2<Double, String>>> res = new ArrayList<>();
@@ -294,6 +296,9 @@ public class Query3 implements IQuery {
         }
 
 
+        rddOutMlib = sparkContext.parallelize(listMlibResults);
+
+
         List<Tuple2<Integer, Tuple2<String, Integer>>> listNaiveResults = new ArrayList<>();
 
         System.out.println("*****Start Naive K-Means*****");
@@ -323,19 +328,15 @@ public class Query3 implements IQuery {
         }
 
 
-        for (Tuple2<Integer, Tuple2<String, Integer>> j : listNaiveResults) {
-            System.out.println(j);
-        }
-
-
         long fNaiveKmeans = System.currentTimeMillis();
         System.out.printf("Total time to compute Naive K-Means: %s ms\n", (fNaiveKmeans - iNaiveKmeans));
 
+        rddOutNaive = sparkContext.parallelize(listNaiveResults);
 
 
 
         long finalTime = System.currentTimeMillis();
-        System.out.printf("Total time to complete: %s ms\n", (finalTime - initialTime));
+        System.out.printf("Total time to complete Query 3: %s ms\n", (finalTime - initialTime));
 
     }
 
@@ -344,6 +345,52 @@ public class Query3 implements IQuery {
      */
     @Override
     public void store() {
+
+        rddOutMlib.saveAsTextFile(Config.PATH_RESULT_QUERY_3_MLIB);
+        rddOutNaive.saveAsTextFile(Config.PATH_RESULT_QUERY_3_NAIVE);
+
+        this.rddOutMlib.foreachPartition(partition -> partition.forEachRemaining(record -> {
+            try{
+                Jedis jedis = new Jedis("localhost");
+                jedis.select(3);
+
+                jedis.set(
+                        "MLib month: " + record._1() + " State: " + record._2()._1(),
+                        String.format(
+                                "MLib ** Month: %s, State: %s ** Cluster: %d",
+                                record._1(),
+                                record._2()._1(),
+                                record._2()._2()
+                        ));
+
+            } catch (JedisConnectionException e){
+                e.printStackTrace();
+            }
+
+        }));
+
+
+        this.rddOutNaive.foreachPartition(partition -> partition.forEachRemaining(record -> {
+            try{
+                Jedis jedis = new Jedis("localhost");
+                jedis.select(3);
+
+                jedis.set(
+                        "Naive" + record._1() + " - " + record._2()._1(),
+                        String.format(
+                                "Naive month: " + record._1() + " State: " + record._2()._1(),
+                                record._1(),
+                                record._2()._1(),
+                                record._2()._2()
+                                ));
+
+            } catch (JedisConnectionException e){
+                e.printStackTrace();
+            }
+
+        }));
+
+
 
     }
 

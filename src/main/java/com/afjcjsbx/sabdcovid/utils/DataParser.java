@@ -29,19 +29,26 @@ public class DataParser {
 
     public static Covid2Data parseCSVcovid2data(String csvLine, String header){
 
-        //PARSER
+        // Tolgo la virgola in alcuni stati che la contengono come nome composto delimitato dale virgolette
+        int i = csvLine.indexOf("\"");
+        if(i != -1){
+            int f = csvLine.substring(i +1).indexOf("\"");
+            String state = csvLine.substring(i + 1, f + i + 1);
+            state = state.replace(",", "");
+
+            csvLine = csvLine.substring(0, i) + state + csvLine.substring(f+i+2);
+        }
+
         String[] data = csvLine.split(",");
 
         Covid2Data covid2Data = new Covid2Data();
         //State not set use country
         covid2Data.setState(data[0].isEmpty() ? data[1] : data[0]);
-        covid2Data.setLat(Double.parseDouble(data[2]));
-        covid2Data.setLng(Double.parseDouble(data[3]));
 
         ArrayList<Integer> cases = new ArrayList<>();
         int n1, n2, res;
 
-        for(int i = 4; i < data.length; i++) {
+        for(i = 4; i < data.length; i++) {
             if (i == 4) {
                 cases.add(Integer.parseInt(data[i]));
             } else {

@@ -9,6 +9,8 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.PairFunction;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import scala.Tuple2;
 import com.afjcjsbx.sabdcovid.spark.helpers.Common;
 import com.afjcjsbx.sabdcovid.utils.DataParser;
@@ -26,7 +28,7 @@ public class Query2 implements IQuery {
     @Getter
     private JavaRDD<Covid2Data> rddIn;
     @Getter
-    private JavaPairRDD<Tuple2<String, Integer>, Integer> rddOut;
+    private JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> rddOut;
     @Getter
     private JavaPairRDD<String, String> rddPairCountryContinent;
 
@@ -64,7 +66,7 @@ public class Query2 implements IQuery {
                 .mapToPair(x-> new Tuple2<>(RegionParser.parseCSVRegion(x).getCountry(), RegionParser.parseCSVRegion(x).getContinent()));
 
         long fParseFile = System.currentTimeMillis();
-        System.out.printf("Total time to parse files: %s ms\n", (fParseFile - iParseFile));
+        System.out.printf("Total time to parse files in Query 2: %s ms\n", (fParseFile - iParseFile));
 
 
     }
@@ -178,25 +180,26 @@ public class Query2 implements IQuery {
 
         JavaPairRDD<Tuple2<String, String>, Tuple2<Integer, Integer>> joinres = count.join(continentTotalCasesPerWeek);
 
-        JavaPairRDD <Tuple2<String,String>,Double> averageContinentCasesPerWeek = joinres.mapToPair(x-> new Tuple2<>(x._1(), Double.parseDouble(String.valueOf(x._2()._2() / x._2()._1()))));
+        JavaPairRDD <Tuple2<String,String>, Double> averageStateCasesPerWeek = joinres.mapToPair(x-> new Tuple2<>(x._1(), Double.parseDouble(String.valueOf(x._2()._2() / x._2()._1()))));
 
 
         // RDD che continene una (Tupla2(Continente, Settimana), DeviazioneStandardPerQuellaSettimana)
-        JavaPairRDD<Tuple2<String,String>,Double> stdDevContinentPerWeek = averageContinentCasesPerWeek.join(rddComplete)
-                .mapToPair(x->new Tuple2<>(x._1(), Math.pow(x._2()._1()-x._2()._2(), 2)))
+        JavaPairRDD<Tuple2<String,String>, Double> stdDevContinentPerWeek = averageStateCasesPerWeek.join(rddComplete)
+                .mapToPair(x->new Tuple2<>(x._1(), Math.pow(x._2()._1() - x._2()._2(), 2)))
                 .reduceByKey(Double::sum).join(count)
-                .mapToPair(x->new Tuple2<>(x._1(),Math.sqrt(x._2()._1()/x._2()._2())));
+                .mapToPair(x->new Tuple2<>(x._1(), Math.sqrt(x._2()._1() / x._2()._2())));
 
 
 
 
-        JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> result_final =
-                maxContinentTotalCasesPerWeek.join(minContinentTotalCasesPerWeek).join(averageContinentCasesPerWeek).join(stdDevContinentPerWeek);
-
+        rddOut = maxContinentTotalCasesPerWeek.join(minContinentTotalCasesPerWeek).join(averageStateCasesPerWeek).join(stdDevContinentPerWeek);
+        for(Tuple2<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> s : rddOut.collect()){
+            System.out.println(s);
+        }
 
 
         long finalTime = System.currentTimeMillis();
-        System.out.printf("Total time to complete: %s ms\n", (finalTime - initialTime));
+        System.out.printf("Total time to complete Query 2: %s ms\n", (finalTime - initialTime));
 
 
     }
@@ -207,19 +210,32 @@ public class Query2 implements IQuery {
     @Override
     public void store() {
 
-        /*
+        rddOut.saveAsTextFile(Config.PATH_RESULT_QUERY_2);
+
         this.rddOut.foreachPartition(partition -> partition.forEachRemaining(record -> {
             try{
                 Jedis jedis = new Jedis("localhost");
                 jedis.select(2);
+
+                jedis.set(
+                        "State :" + record._1()._1() + " Week: " +record._1()._2(),
+                        String.format(
+                                "** State: %s - Week: %s ** Max: %s, Min: %s, AVG: %s, STD: %s",
+                                record._1()._1(),
+                                record._1()._2(),
+                                record._2()._1()._1()._1(),
+                                record._2()._1()._1()._2(),
+                                record._2()._1()._2(),
+                                record._2()._2()
+                        ));
+
             } catch (JedisConnectionException e){
                 e.printStackTrace();
             }
 
-
         }));
 
-         */
+
 
     }
 
