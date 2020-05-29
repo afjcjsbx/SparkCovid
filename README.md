@@ -32,7 +32,7 @@ To see the NiFi status open a new web page on your browser and type [http://loca
 
 Now, after Nifi and HDFS have been started, the Spark master will automatically start.
 
-Finally the results of the executions will be available in the HDFS, in the "results" folder and in Redis at the address link [http: // localhost: 5001](http: // localhost: 5001).
+Finally the results of the executions will be available in the HDFS, in the "results" folder and in Redis at the address link [http://localhost:5001](http://localhost:5001).
 
 By opening the Redis web page, type `redis` in place of localhost, next to the `host` entry.
 Selecting the database ID, with ID = 1 we will go to view the result of query1, with ID = 2 we will go to view the result of query 2, with ID = 3 we will go to view the result of query 3
