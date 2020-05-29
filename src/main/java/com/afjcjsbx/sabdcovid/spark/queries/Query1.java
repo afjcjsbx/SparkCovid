@@ -1,8 +1,10 @@
 package com.afjcjsbx.sabdcovid.spark.queries;
 
+import com.afjcjsbx.sabdcovid.model.RedisConnection;
 import lombok.Getter;
 import com.afjcjsbx.sabdcovid.model.Config;
 import com.afjcjsbx.sabdcovid.model.Covid1Data;
+import org.apache.hadoop.mapred.InvalidInputException;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -98,16 +100,22 @@ public class Query1 implements IQuery {
 
     }
 
+    /**
+     * Gestione della persistenza dei risultati del processamento
+     */
     @Override
     public void store() {
+        // Salvo i risultati sull'HDFS
         rddOut.saveAsTextFile(Config.PATH_RESULT_QUERY_1);
 
         this.rddOut.foreachPartition(partition -> partition.forEachRemaining(record -> {
             try{
-                Jedis jedis = new Jedis("localhost");
-                jedis.select(1);
+                // Connessione a redis
+                RedisConnection jedis = new RedisConnection(Config.DEFAULT_REDIS_HOSTNAME);
+                // Seleziono il database numero 2 per inserire i risultati
+                jedis.conn().select(1);
 
-                jedis.set(
+                jedis.conn().set(
                         record._1().toString(),
                         String.format(
                                 "**Week: %d** AVG Healed: %s, AVG Swads: %s",

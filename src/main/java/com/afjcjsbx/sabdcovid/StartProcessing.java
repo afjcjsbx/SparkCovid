@@ -11,22 +11,30 @@ import com.afjcjsbx.sabdcovid.spark.queries.Query2;
 import com.afjcjsbx.sabdcovid.spark.queries.Query3;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeUnit;
 
 public class StartProcessing {
 
     public static void main(String[] args) throws IOException, URISyntaxException {
 
-        // Get datastore filesystem
-        FileSystem hdfs = Config.configureFileSystem();
+        try {
+            // Configurazione dell'HDFS
+            FileSystem hdfs = Config.configureFileSystem();
 
-        // Delete output if exists
-        if (hdfs.exists(new Path(Config.OUTPUT_DIR))){
-            hdfs.delete(new Path(Config.OUTPUT_DIR), true);
+            // Eliminazione dei precedenti risultati
+            if (hdfs.exists(new Path(Config.OUTPUT_DIR))) {
+                hdfs.delete(new Path(Config.OUTPUT_DIR), true);
+            }
+
+        }catch (ConnectException e){
+            System.out.println("HDFS not connected !");
         }
 
 
+        // Inizializzazione dello Spark Processor
         Spark sparkProcessor = new Spark();
         JavaSparkContext sparkContext = sparkProcessor.getSparkContext();
 
@@ -38,6 +46,16 @@ public class StartProcessing {
 
         sparkContext.stop();
         sparkProcessor.close();
+
+        // Una volta terminato il processamento stoppiamo Spark per 24 ore
+        try {
+            TimeUnit.DAYS.sleep(1);
+            System.out.println("**Spark paused for 24 hours from now**");
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
 
 }

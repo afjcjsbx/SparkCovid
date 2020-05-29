@@ -1,12 +1,3 @@
-
-/*
- * KMeans.java ; Cluster.java ; Point.java
- *
- * Solution implemented by DataOnFocus
- * www.dataonfocus.com
- * 2015
- *
- */
 package com.afjcjsbx.sabdcovid.spark.helpers;
 
 import org.apache.spark.api.java.JavaPairRDD;
@@ -20,21 +11,20 @@ import java.util.*;
 
 public class NaiveKMeans implements Serializable {
 
-    //Number of Clusters. This metric should be related to the number of points
+    // Numero di clusers, ovviamente dovrà essere un numero sempre
+    // minore al numero di punti che andiamo a classificare
     private int NUM_CLUSTERS;
-    //Number of iterations
+    // Numero di iterazioni da far eseguire all'algoritmo
     private final int NUM_ITERATIONS;
-    // Max value of trend
+    // Valore massimo del punto
     private double MAX_VALUE;
-    //Min and Max X and Y
+    // Valore minimo del punto
     private double MIN_VALUE;
-    // List of crentroids
-    //private JavaPairRDD<Integer, Double> centroids;
+    // Lista dei centroidi
     private List<Double> centroids;
-
+    // RDD'S di ausilio
     private JavaRDD<Iterable<Tuple2<Double, String>>> rddInput;
     private JavaPairRDD<Integer, Tuple2<Double, String>> points;
-    private JavaPairRDD<String, Integer> rddOutClusters;
 
     public NaiveKMeans(JavaRDD<Iterable<Tuple2<Double, String>>> input, int clusters, int iterations) {
         this.rddInput = input;
@@ -47,6 +37,7 @@ public class NaiveKMeans implements Serializable {
     /**
      * TODO: Implementare con gli RDD
      */
+    // Trovo il valore massimo tra tutti i punti da classificare
     private double findMax() {
         double max = 0;
         for (Iterable<Tuple2<Double, String>> t : rddInput.collect()) {
@@ -55,17 +46,15 @@ public class NaiveKMeans implements Serializable {
                     max = i._1();
                 }
             }
-
         }
 
-        System.out.println("Max Value naive " + max);
         return max;
     }
-
 
     /**
      * TODO: Implementare con gli RDD
      */
+    // Trovo il valore minimo tra tutti i punti da classificare
     private double findMin() {
         double min = MAX_VALUE;
         for (Iterable<Tuple2<Double, String>> t : rddInput.collect()) {
@@ -74,72 +63,74 @@ public class NaiveKMeans implements Serializable {
                     min = i._1();
                 }
             }
-
         }
 
-        System.out.println("Min Value naive " + min);
         return min;
     }
 
 
-    //Initializes the process
+    // Inizializzazione del processo
     private void init() {
 
+        // Calcolo minimo e massimo
         MAX_VALUE = findMax();
         MIN_VALUE = findMin();
 
-        //Set Random Centroids
+        // Produco dei centroidi con coordinate random entro il range [MII, MAX]
         centroids = new ArrayList<>();
         for (int i = 0; i < NUM_CLUSTERS; i++) {
             double centroid = createRandomPoint(MIN_VALUE, MAX_VALUE);
             centroids.add(centroid);
         }
-
-
+        // Inizio il training
         start();
-
     }
 
 
-    //The process to calculate the K Means, with iterating method.
+    // Processo per calcolare il KMeans con il metodo iterativo
     private void start() {
         int iteration = 0;
 
-        // Add in new data, one at a time, recalculating centroids with each new one. 
+        // Aggiunge i nuovi dati ricalcolando i centroidi ogni volta.
         while (iteration < NUM_ITERATIONS) {
-
-            //Assign points to the closer cluster
+            // Assegno i punti al cluster più vicino
             assignCluster();
-            //Calculate new centroids.
+            // Calcolo i nuovi centroidi
             calculateCentroids();
-            //Increment Iteration
+            // Incremento l'iterazione
             iteration++;
-
         }
     }
 
 
+    // Assegno il cluster ai punti
     private void assignCluster() {
-        points = rddInput.flatMapToPair((PairFlatMapFunction<Iterable<Tuple2<Double, String>>, Integer, Tuple2<Double, String>>) tuple2s -> {
-            double max = MAX_VALUE;
-            double min = MIN_VALUE;
+
+        points = rddInput.flatMapToPair((PairFlatMapFunction<Iterable<Tuple2<Double, String>>, Integer, Tuple2<Double, String>>) tuples -> {
+            double min;
             int cluster;
             double distance;
 
+            // ArrayList di appoggio <cluster <trend, stato>>
             ArrayList<Tuple2<Integer, Tuple2<Double, String>>> res = new ArrayList<>();
 
-            for (Tuple2<Double, String> t : tuple2s) {
-                //min = distance(centroids.get(0), t._1());
+            // Itero per tutti i punti
+            for (Tuple2<Double, String> tuple : tuples) {
                 min = MAX_VALUE;
                 cluster = 0;
+                // Per ogni cluster mi calcolo la distanza e se è inferiore
+                // al massimo assegno il punto a quel cluster
                 for (int i = 0; i < NUM_CLUSTERS; i++) {
-                    distance = distance(centroids.get(i), t._1());
+                    // Calcolo la distanza dal centroie
+                    distance = distance(centroids.get(i), tuple._1());
                     if (distance < min) {
                         min = distance;
                         cluster = i;
                     }
                 }
-                res.add(new Tuple2<>(cluster, t));
+
+                // Assegno il punto al cluster
+                res.add(new Tuple2<>(cluster, tuple));
             }
             return res.iterator();
         });
@@ -154,35 +145,34 @@ public class NaiveKMeans implements Serializable {
         // Faccio la somma di tutti i trend per ogni cluster
         JavaPairRDD<Integer, Double> rddTrendSum = rddClusterTrends.reduceByKey(Double::sum);
 
-
-        // Creo un RDD appoggio per contare quanti sono i punti per ogni cluster
+        // Creo un RDD di appoggio per contare quanti sono i punti per ogni cluster
         JavaPairRDD<Integer, Double> rddCountPointsPerCluster = rddClusterTrends
                         .mapToPair(x -> new Tuple2<>(x._1(), 1.0))
                         .reduceByKey(Double::sum);
 
-        JavaPairRDD<Integer, Tuple2<Double, Double>> join_fox0 = rddTrendSum.join(rddCountPointsPerCluster);
+        // Unisco i due RDD's (cluster, (trend, punto)
+        JavaPairRDD<Integer, Tuple2<Double, Double>> rddAusiliar = rddTrendSum.join(rddCountPointsPerCluster);
 
         //RDD con chiave il cluster e valore il nuovo centroide
-        JavaPairRDD<Integer, Double> centroide_nuovo_final = join_fox0.mapToPair(x -> new Tuple2<>(x._1(), ((x._2()._1())/x._2()._2())));
+        JavaPairRDD<Integer, Double> rddClusterValue = rddAusiliar.mapToPair(x -> new Tuple2<>(x._1(), ((x._2()._1())/x._2()._2())));
 
         //Aggiorna Array List di centroidi con i nuovi
-        for (Tuple2<Integer, Double> p : centroide_nuovo_final.distinct().collect()) {
+        for (Tuple2<Integer, Double> cluster : rddClusterValue.distinct().collect()) {
             for (int i = 0; i < centroids.size(); i++)
-                if (p._1() == i) {
-                    centroids.set(i, p._2());
+                if (cluster._1() == i) {
+                    centroids.set(i, cluster._2());
                 }
         }
+
     }
 
-
-    //Creates random point
+    // Crea un punto random compreso nell'intervallo [MIN, MAX]
     protected static double createRandomPoint(double min, double max) {
         Random r = new Random();
         return min + (max - min) * r.nextDouble();
     }
 
-
-    //Calculates the distance between two points.
+    // Calcola la distanza tra due punti in uno spazio monodimensionale
     protected static double distance(double p, double centroid) {
         return Math.sqrt(Math.pow((centroid - p), 2));
     }
@@ -190,12 +180,6 @@ public class NaiveKMeans implements Serializable {
 
     public JavaPairRDD<Integer, Tuple2<Double, String>> getClusters() {
         return points;
-    }
-
-    public void plotCluster() {
-        for (Tuple2<Integer, Tuple2<Double, String>> p : points.collect()) {
-            System.out.println(p);
-        }
     }
 
     public List<Double> getCentroids() {

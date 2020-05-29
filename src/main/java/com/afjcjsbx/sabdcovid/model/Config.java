@@ -17,20 +17,24 @@ public class Config extends HashMap<String, Object> implements Serializable {
 
     public static int WEEK_OFFSET = 0; // Sostituire con 9 per far coincidere la settimana di inizio del dataset con la prima settimana
 
-    public static String PATH_DATASET_1 = "hdfs://localhost:54310/csv_datasets/dataset1.csv";
-    public static String PATH_DATASET_2 = "hdfs://localhost:54310/csv_datasets/dataset2.csv";
-    public static String PATH_COUNTRY_CONTINENT = "hdfs://localhost:54310/csv_datasets/country_continent.csv";
+    public final static String DATA_STORE = "master";
+    public final static String DEFAULT_DATA_STORE = "hdfs://master:54310";
 
-    public static String OUTPUT_DIR = "hdfs://localhost:54310/results/";
+    public final static String REDIS_HOSTNAME = "redis-hostname";
+    public final static String DEFAULT_REDIS_HOSTNAME = "redis";
+
+
+    public static String PATH_DATASET_1 = DEFAULT_DATA_STORE + "/csv_datasets/dataset1.csv";
+    public static String PATH_DATASET_2 = DEFAULT_DATA_STORE + "/csv_datasets/dataset2.csv";
+    public static String PATH_COUNTRY_CONTINENT = DEFAULT_DATA_STORE + "/csv_datasets/country_continent.csv";
+
+    public static String OUTPUT_DIR = DEFAULT_DATA_STORE + "/results/";
 
     public static String PATH_RESULT_QUERY_1 = OUTPUT_DIR + "resultQuery1";
     public static String PATH_RESULT_QUERY_2 = OUTPUT_DIR + "resultQuery2";
     public static String PATH_RESULT_QUERY_3_MLIB = OUTPUT_DIR + "resultQuery3Mlib";
     public static String PATH_RESULT_QUERY_3_NAIVE = OUTPUT_DIR + "resultQuery3Naive";
 
-
-    public final static String DATA_STORE = "master";
-    public final static String DEFAULT_DATA_STORE = "hdfs://localhost:54310";
 
     public final static String SPARK_MASTER = "com.afjcjsbx.sabdcovid.spark-master";
     //public final static String DEFAULT_SPARK_MASTER = "com.afjcjsbx.sabdcovid.spark://com.afjcjsbx.sabdcovid.spark:4040";
@@ -41,9 +45,6 @@ public class Config extends HashMap<String, Object> implements Serializable {
 
     public final static String SPARK_LOG_LEVEL = "com.afjcjsbx.sabdcovid.spark-log-level";
     public final static String DEFAULT_SPARK_LOG_LEVEL = "ERROR";
-
-    public final static String REDIS_HOSTNAME = "redis-hostname";
-    public final static String DEFAULT_REDIS_HOSTNAME = "redis";
 
     public final static String SERIALIZER_KEY = "serializer-key";
     public final static String DEFAULT_SERIALIZER_KEY = "com.afjcjsbx.sabdcovid.spark.serializer";
