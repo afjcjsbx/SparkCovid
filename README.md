@@ -39,7 +39,21 @@ Selecting the database ID, with ID = 1 we will go to view the result of query1, 
 
 
 ### Run Spark
-For run Spark, open a terminal and type:
+For run Spark-Master, open a terminal and type:
+
+```
+sh script/avvoSparkMaster.sh
+```
+For run Spark-Workers, open a terminal and type:
+
+```
+docker run -it --network=project_network --name spark-worker-1 --link spark-master:spark-master -e ENABLE_INIT_DAEMON=false bde2020/spark-worker:2.4.5-hadoop2.7
+docker run -it --network=project_network --name spark-worker-2 --link spark-master:spark-master -e ENABLE_INIT_DAEMON=false bde2020/spark-worker:2.4.5-hadoop2.7
+docker run -it --network=project_network --name spark-worker-2 --link spark-master:spark-master -e ENABLE_INIT_DAEMON=false bde2020/spark-worker:2.4.5-hadoop2.7
+
+```
+
+For run Spark-Submitter, open a terminal and type:
 
 ```
 sh script/avvoSparkSubmit.sh
