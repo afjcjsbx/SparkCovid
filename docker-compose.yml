@@ -1,0 +1,117 @@
+version: '3.6'
+
+services:
+    slave1:
+        image: richardsti/hadoop
+        hostname: slave1
+        container_name: slave1
+        ports:
+            - 9864:9864
+        depends_on:
+            - master
+        environment:
+            - CORE_CONF_fs_defaultFS=hdfs://master:54310
+        networks:
+            - project_network
+        tty: true
+
+    slave2:
+        image: richardsti/hadoop
+        hostname: slave2
+        container_name: slave2
+        ports:
+            - 9863:9864
+        depends_on:
+            - master
+        environment:
+            - CORE_CONF_fs_defaultFS=hdfs://master:54310
+        networks:
+            - project_network
+        tty: true
+
+    slave3:
+        image: richardsti/hadoop
+        hostname: slave3
+        container_name: slave3
+        ports:
+            - 9862:9864
+        depends_on:
+            - master
+        environment:
+            - CORE_CONF_fs_defaultFS=hdfs://master:54310
+        networks:
+            - project_network
+        tty: true
+        
+    master:
+        image: richardsti/hadoop
+        hostname: master
+        container_name: master
+        ports:
+            - 9870:9870
+            - 54310:54310
+        expose:
+            - 54310
+            - 9870
+        networks:
+            - project_network
+        stdin_open: true
+        tty: true
+
+    
+    nifi:
+        image: richardsti/nifi
+        container_name: nifi
+        hostname: nifi
+
+        ports:
+            - 8080:8080 # Unsecured HTTP Web Port
+        volumes:
+            - ./nifi/nifi_templates/:/opt/nifi/nifi-current/conf/
+        networks:
+            - project_network
+        stdin_open: true
+        tty: true
+        logging:
+            driver: none
+
+   
+    redis:
+        image: redis:6.0.3-alpine
+        hostname: redis
+        container_name: redis
+        ports:
+            - 6379:6379
+        expose:
+            - 6379
+        networks:
+            - project_network
+        volumes:
+            - ./vol/conf/redis.conf:/usr/local/bin/redis.conf
+        command:
+            - redis-server
+            - /usr/local/bin/redis.conf
+        environment:
+            - 'REDIS_URL=redis://redis:6379/'
+            - 'API_PORT=6379'
+            - 'NODE_ENV=production'
+        restart: always
+
+
+    redis-web-ui:
+        image: marian/rebrow:latest
+        hostname: redis-web-ui
+        container_name: redis_web_ui
+        depends_on:
+            - redis
+        ports:
+            - 5001:5001
+        networks:
+            - project_network
+        
+
+
+networks:
+    project_network:
+        name: project_network
+        driver: bridge
