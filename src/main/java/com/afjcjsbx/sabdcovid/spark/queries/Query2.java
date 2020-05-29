@@ -205,7 +205,7 @@ public class Query2 implements IQuery {
 
 
         // Unisco tutti gli RDD che contengono le statistiche in uni
-        JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> rddTransition = maxContinentTotalCasesPerWeek.join(minContinentTotalCasesPerWeek).join(averageStateCasesPerWeek).join(stdDevContinentPerWeek);
+        JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> rddTransition = minContinentTotalCasesPerWeek.join(maxContinentTotalCasesPerWeek).join(averageStateCasesPerWeek).join(stdDevContinentPerWeek);
 
         // Mi mappo i risultati in un nuovo RDD che contiene una Tuple4 per una migliore gestione
         rddOut = rddTransition.mapToPair(x-> new Tuple2<>(x._1(), new Tuple4<>(x._2()._1()._1()._1(), x._2()._1()._1()._2(), x._2()._1()._2(), x._2()._2())));
@@ -233,7 +233,7 @@ public class Query2 implements IQuery {
                 jedis.conn().set(
                         record._1().toString(),
                         String.format(
-                                "Max: %s, Min: %s, AVG: %s, STD: %s",
+                                "Min: %s, Max: %s, AVG: %s, STD: %s",
                                 record._2()._1(),
                                 record._2()._2(),
                                 record._2()._3(),
