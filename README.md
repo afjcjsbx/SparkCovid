@@ -1,5 +1,5 @@
 # SparkCovid
-** First project of SABD A.A. 2019/2020 **
+**First project of SABD A.A. 2019/2020**
 
 ## Configuration
 
