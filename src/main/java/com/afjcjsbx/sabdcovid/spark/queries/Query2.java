@@ -29,9 +29,9 @@ public class Query2 implements IQuery {
     @Getter
     private JavaRDD<Covid2Data> rddIn;
     @Getter
-    private JavaPairRDD<Tuple2<String, String>, Tuple4<Integer, Integer, Double, Double>> rddOut;
+    private JavaPairRDD<Tuple2<String, Integer>, Tuple4<Integer, Integer, Double, Double>> rddOut;
     @Getter
-    private JavaPairRDD<String, String> rddPairCountryContinent;    
+    private JavaPairRDD<String, String> rddPairCountryContinent;
 
 
 
@@ -140,9 +140,9 @@ public class Query2 implements IQuery {
         String header = input.first();
         String[] cols = header.split(",");
         ArrayList<String> dates = new ArrayList<>(Arrays.asList(cols).subList(4, cols.length));
-        ArrayList<String> weeks = new ArrayList<>();
+        ArrayList<Integer> weeks = new ArrayList<>();
         for (String date : dates) {
-            weeks.add(Common.getWeekFrom2(date).toString());
+            weeks.add(Common.getWeekFrom2(date) - Config.WEEK_OFFSET_QUERY_2);
         }
 
 
@@ -150,14 +150,15 @@ public class Query2 implements IQuery {
         // primo campo e il numero della settimana come secondo campo, Il valore Integer rappresenta
         // il numero dei casi relativi per un giorno di quella settimana della somma di tutti i casi
         // per ogni stato
-        JavaPairRDD<Tuple2<String,String>,Integer> rddNumberCasesOfContinentPerWeek = rddContinentDayByDay
-                .flatMapToPair((PairFlatMapFunction<Tuple2<String, ArrayList<Integer>>, Tuple2<String, String>, Integer>) arrayListTuple -> {
-                    ArrayList<Tuple2<Tuple2<String, String>,Integer>> result_flat = new ArrayList<>();
+        JavaPairRDD<Tuple2<String, Integer>,Integer> rddNumberCasesOfContinentPerWeek = rddContinentDayByDay
+                .flatMapToPair((PairFlatMapFunction<Tuple2<String, ArrayList<Integer>>, Tuple2<String, Integer>, Integer>) listTuple -> {
 
-                    for(int i = 0;i < weeks.size(); i++){
-                        Tuple2<Tuple2<String, String>, Integer> tuple = new Tuple2<>(
-                                new Tuple2<>(arrayListTuple._1(), weeks.get(i)), arrayListTuple._2().get(i));
-                                result_flat.add(tuple);
+                    ArrayList<Tuple2<Tuple2<String, Integer>,Integer>> result_flat = new ArrayList<>();
+
+                    for(int i = 0; i < weeks.size(); i++){
+                        Tuple2<Tuple2<String, Integer>, Integer> tuple = new Tuple2<>(
+                                new Tuple2<>(listTuple._1(), weeks.get(i)), listTuple._2().get(i));
+                        result_flat.add(tuple);
                     }
 
                     return result_flat.iterator();
@@ -168,44 +169,44 @@ public class Query2 implements IQuery {
 
 
         // Accorpo l'RDD che continene una Tupla2(Continente, Settimana), CasiTotaliSettimana)
-        JavaPairRDD <Tuple2<String, String>, Integer> continentTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
+        JavaPairRDD <Tuple2<String, Integer>, Integer> continentTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
                 .reduceByKey(Integer::sum);
 
 
         // RDD che continene una (Tupla2(Continente, Settimana), MaxNumeroDiCasiInUnGiornoDiQuellaSettimana)
-        JavaPairRDD<Tuple2<String, String>, Integer> maxContinentTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
+        JavaPairRDD<Tuple2<String, Integer>, Integer> maxContinentTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
                 .reduceByKey(Math::max);
 
         // RDD che continene una (Tupla2(Continente, Settimana), MinNumeroDiCasiInUnGiornoDiQuellaSettimana)
-        JavaPairRDD<Tuple2<String, String>, Integer> minContinentTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
+        JavaPairRDD<Tuple2<String, Integer>, Integer> minContinentTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
                 .reduceByKey(Math::min);
 
 
 
-        JavaPairRDD<Tuple2<String, String>, Integer> rddTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
+        JavaPairRDD<Tuple2<String, Integer>, Integer> rddTotalCasesPerWeek = rddNumberCasesOfContinentPerWeek
                 .mapToPair(x-> new Tuple2<>(x._1(), 1));
         // RDD (Continent, Week) , 7)
-        JavaPairRDD <Tuple2<String, String>, Integer> rddSumDays = rddTotalCasesPerWeek
+        JavaPairRDD <Tuple2<String, Integer>, Integer> rddSumDays = rddTotalCasesPerWeek
                 .reduceByKey(Integer::sum);
 
-        JavaPairRDD<Tuple2<String, String>, Tuple2<Integer, Integer>> rddJoined = rddSumDays
+        JavaPairRDD<Tuple2<String, Integer>, Tuple2<Integer, Integer>> rddJoined = rddSumDays
                 .join(continentTotalCasesPerWeek);
 
-        JavaPairRDD <Tuple2<String,String>, Double> averageStateCasesPerWeek = rddJoined
+        JavaPairRDD <Tuple2<String, Integer>, Double> averageStateCasesPerWeek = rddJoined
                 .mapToPair(x-> new Tuple2<>(x._1(), Double.parseDouble(String.valueOf(x._2()._2() / x._2()._1()))));
 
 
         // RDD che continene una (Tupla2(Continente, Settimana), DeviazioneStandardPerQuellaSettimana)
         // calcolata con la MapRecude
-        JavaPairRDD<Tuple2<String,String>, Double> stdDevContinentPerWeek = averageStateCasesPerWeek
+        JavaPairRDD<Tuple2<String, Integer>, Double> stdDevContinentPerWeek = averageStateCasesPerWeek
                 .join(rddNumberCasesOfContinentPerWeek)
                 .mapToPair(x->new Tuple2<>(x._1(), Math.pow(x._2()._1() - x._2()._2(), 2)))
                 .reduceByKey(Double::sum).join(rddSumDays)
                 .mapToPair(x->new Tuple2<>(x._1(), Math.sqrt(x._2()._1() / x._2()._2())));
 
 
-        // Unisco tutti gli RDD che contengono le statistiche in uni
-        JavaPairRDD<Tuple2<String, String>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> rddTransition = minContinentTotalCasesPerWeek.join(maxContinentTotalCasesPerWeek).join(averageStateCasesPerWeek).join(stdDevContinentPerWeek);
+        // Unisco tutti gli RDD che contengono le statistiche in uno
+        JavaPairRDD<Tuple2<String, Integer>, Tuple2<Tuple2<Tuple2<Integer, Integer>, Double>, Double>> rddTransition = minContinentTotalCasesPerWeek.join(maxContinentTotalCasesPerWeek).join(averageStateCasesPerWeek).join(stdDevContinentPerWeek);
 
         // Mi mappo i risultati in un nuovo RDD che contiene una Tuple4 per una migliore gestione
         rddOut = rddTransition.mapToPair(x-> new Tuple2<>(x._1(), new Tuple4<>(x._2()._1()._1()._1(), x._2()._1()._1()._2(), x._2()._1()._2(), x._2()._2())));

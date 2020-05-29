@@ -61,38 +61,36 @@ public class Query1 implements IQuery {
 
         // Creo un RDD composto da un Integer che mi rappresenta il numero della settimana e il
         // secondo campo mantiene i dati relativi a quella settimana
-        JavaPairRDD<Integer, Covid1Data> pair = rddIn.mapToPair((PairFunction<Covid1Data, Integer, Covid1Data>) value -> {
-            int week = Common.getWeekFrom(value.getData()) - Config.WEEK_OFFSET;
-
+        JavaPairRDD<Integer, Covid1Data> rddData = rddIn.mapToPair((PairFunction<Covid1Data, Integer, Covid1Data>) value -> {
+            int week = Common.getWeekFrom(value.getData()) - Config.WEEK_OFFSET_QUERY_1;
             return new Tuple2<>(week, value);
         }).cache();
 
 
         // Creo un RDD composto da un Integer che mi rappresenta il numero della settimana e un
         // Double che rappresenta il numero medio di persone guarite in quella settimana
-        JavaPairRDD<Integer, Double> rddWeeklyAvgHealed = pair
+        JavaPairRDD<Integer, Double> rddWeeklyAvgHealed = rddData
                 .aggregateByKey(new StatCounter(), (acc, x) -> acc.merge(x.getDimessi_guariti()), StatCounter::merge)
                 .mapToPair(x -> {
-                    Integer key = x._1();
-                    Double mean = x._2().mean();
-                    return new Tuple2<>(key, mean);
+                    Integer week = x._1();
+                    Double avgHealed = x._2().mean();
+                    return new Tuple2<>(week, avgHealed);
                 });
 
 
         // Creo un RDD composto da un Integer che mi rappresenta il numero della settimana e un
         // Double che rappresenta il numero medio di tamponi effettuati in quella settimana
-        JavaPairRDD<Integer, Double> rddWeeklyAvgSwabds = pair
+        JavaPairRDD<Integer, Double> rddWeeklyAvgSwabds = rddData
                 .aggregateByKey(new StatCounter(), (acc, x) -> acc.merge(x.getTamponi()), StatCounter::merge)
                 .mapToPair(x -> {
-                    Integer key = x._1();
-                    Double mean = x._2().mean();
-                    return new Tuple2<>(key, mean);
+                    Integer week = x._1();
+                    Double avgSwabds = x._2().mean();
+                    return new Tuple2<>(week, avgSwabds);
                 });
 
 
         //Unisco i due RDDs
         rddOut = rddWeeklyAvgHealed.join(rddWeeklyAvgSwabds).sortByKey();
-
 
 
         long finalTime = System.currentTimeMillis();

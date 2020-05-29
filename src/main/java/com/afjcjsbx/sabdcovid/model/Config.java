@@ -15,7 +15,12 @@ import org.apache.hadoop.fs.Path;
 
 public class Config extends HashMap<String, Object> implements Serializable {
 
-    public static int WEEK_OFFSET = 0; // Sostituire con 9 per far coincidere la settimana di inizio del dataset con la prima settimana
+    // Parametri dei KMeans
+    public static int NUM_CLUSTERS = 4;
+    public static int NUM_ITERATIONS = 20;
+
+    public static int WEEK_OFFSET_QUERY_1 = 0; // Sostituire con 9 per far coincidere la settimana di inizio del dataset con la prima settimana
+    public static int WEEK_OFFSET_QUERY_2 = 0; // Sostituire con 9 per far coincidere la settimana di inizio del dataset con la prima settimana
 
     public final static String DATA_STORE = "master";
     public final static String DEFAULT_DATA_STORE = "hdfs://master:54310";

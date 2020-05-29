@@ -33,11 +33,6 @@ import java.util.List;
 
 public class Query3 implements IQuery {
 
-    // Parametri dei KMeans
-    private static int NUM_CLUSTERS = 4;
-    private static int NUM_ITERATIONS = 20;
-
-
     private final JavaSparkContext sparkContext;
 
     @Getter
@@ -80,8 +75,6 @@ public class Query3 implements IQuery {
 
         long fParseFile = System.currentTimeMillis();
         System.out.printf("Total time to parse files in Query 3: %s ms\n", (fParseFile - iParseFile));
-
-
     }
 
     /**
@@ -99,25 +92,17 @@ public class Query3 implements IQuery {
      */
     @Override
     public void execute() {
-
         long initialTime = System.currentTimeMillis();
 
-        // Creo un RDD composto da una String che rappresenta il nome dello stato e i relativi dati di quello stato
-        //JavaPairRDD<String, Covid2Data> rddStateData = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x));
-
-
-        // Creo un RDD composto da una String che rappresenta il nome del continente e una lista di interi in
+        // Creo un RDD composto da una String che rappresenta il nome dello stato e una lista di interi in
         // cui ci sono i casi totali relativi giorno per giorno
-        JavaPairRDD<String, ArrayList<Integer>> rdd_region_final = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x.getCases()));
+        JavaPairRDD<String, List<Integer>> rddStateCases = rddIn.mapToPair(x -> new Tuple2<>(x.getState(), x.getCases()));
 
 
-        // Creo un RDD composto da una Tupla2<String, String> che avrà il nome del continente come
-        // primo campo e il numero del mese come secondo campo, Il valore Integer rappresenta
-        // il numero dei casi relativi per ogni giorno di quel mese per ogni stato quindi conterrà
-        // n tuple dove n sono tutti gli stati
-        JavaPairRDD<String, ArrayList<Integer>> rddContinentDayByDay = rdd_region_final
-                .reduceByKey((Function2<ArrayList<Integer>, ArrayList<Integer>, ArrayList<Integer>>) (arr1, arr2) -> {
-                    ArrayList<Integer> sum = new ArrayList<>();
+        // Creo un RDD composto da una stringa che rappresenta il nome dello stato e un ArrayList
+        JavaPairRDD<String, List<Integer>> rddContinentDayByDay = rddStateCases
+                .reduceByKey((Function2<List<Integer>, List<Integer>, List<Integer>>) (arr1, arr2) -> {
+                    List<Integer> sum = new ArrayList<>();
                     for (int z = 0; z < arr1.size(); z++)
                         sum.add(arr1.get(z) + arr2.get(z));
                     return sum;
@@ -135,17 +120,14 @@ public class Query3 implements IQuery {
         }
 
 
-        // Creo un RDD composto da una Tupla2<String, String> che avrà il nome del continente come
-        // primo campo e il numero della settimana come secondo campo, Il valore Integer rappresenta
-        // il numero dei casi relativi per un giorno di quella settimana della somma di tutti i casi
-        // per ogni stato
+        // Creo un RDD che coterrà il numero dello stato, il mese e i casi relativi all'n-esimo giorno di quel mese
         JavaPairRDD<Tuple2<String, Integer>, Integer> rddComplete = rddContinentDayByDay
-                .flatMapToPair((PairFlatMapFunction<Tuple2<String, ArrayList<Integer>>, Tuple2<String, Integer>, Integer>) arrayListTuple2 -> {
-                    ArrayList<Tuple2<Tuple2<String, Integer>, Integer>> result_flat = new ArrayList<>();
+                .flatMapToPair((PairFlatMapFunction<Tuple2<String, List<Integer>>, Tuple2<String, Integer>, Integer>) listTuple2 -> {
+                    List<Tuple2<Tuple2<String, Integer>, Integer>> result_flat = new ArrayList<>();
 
                     for (int i = 1; i < months.size(); i++) {
                         Tuple2<Tuple2<String, Integer>, Integer> temp = new Tuple2<>(
-                                new Tuple2<>(arrayListTuple2._1(), months.get(i)), arrayListTuple2._2().get(i));
+                                new Tuple2<>(listTuple2._1(), months.get(i)), listTuple2._2().get(i));
                         result_flat.add(temp);
                     }
 
@@ -153,7 +135,7 @@ public class Query3 implements IQuery {
                 });
 
 
-        // Raggruppo per chiave : <Stato ,Mese> ottenend un rdd <Stato ,Mese>, Iterable
+        // Raggruppo per chiave : <Stato ,Mese> ottenendo un RDD <Stato ,Mese>, Iterable
         // dei nuovi casi del mese giorno per giorno
         JavaPairRDD<Tuple2<String, Integer>, Iterable<Integer>> rddTotalCasesInStateByMonth = rddComplete.groupByKey();
 
@@ -161,24 +143,24 @@ public class Query3 implements IQuery {
         // Colcoliamo il trend mese per mese per ogni stato ottenendo cos' un RDD che ha come
         // chiave il mese e come campo una tupla2 contenente come primo valore il Trend e come
         // secondo valore il nome dello stato
-        JavaPairRDD<Integer, Tuple2<Double, String>> rddGroupedPerMonth = rddTotalCasesInStateByMonth.mapToPair((PairFunction<Tuple2<Tuple2<String, Integer>, Iterable<Integer>>, Integer, Tuple2<Double, String>>) input1 -> {
+        JavaPairRDD<Integer, Tuple2<String, Double>> rddGroupedPerMonth = rddTotalCasesInStateByMonth.mapToPair((PairFunction<Tuple2<Tuple2<String, Integer>, Iterable<Integer>>, Integer, Tuple2<String, Double>>) input1 -> {
 
             String state_name = input1._1()._1();
             Integer month = input1._1()._2();
-            ArrayList<Integer> casesPerMonth = new ArrayList<>();
+            List<Integer> casesPerMonth = new ArrayList<>();
 
             for (Integer value : input1._2()) {
                 casesPerMonth.add(value);
             }
 
-            double res = new LinearRegression(casesPerMonth).getCoefficient();
-            return new Tuple2<>(month, new Tuple2<>(res, state_name));
+            double trendLineCoefficint = new LinearRegression(casesPerMonth).getCoefficient();
+            return new Tuple2<>(month, new Tuple2<>(state_name, trendLineCoefficint));
         });
 
 
         // Raggrupiamo creando un rdd contenente per chiave i mesi e per valore un iterable con i trend
         // per ogni stato dei maggiori 50 precedentemente calcolati
-        JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> rddResultGrouped = rddGroupedPerMonth.groupByKey();
+        JavaPairRDD<Integer, Iterable<Tuple2<String, Double>>> rddResultGrouped = rddGroupedPerMonth.groupByKey();
 
 
         // Definiamo un arrayList contente le tuple del tipo <Numero Mese, Lista di Tuple<Trend, Nome stato>> corrispettivi al mese
@@ -188,13 +170,13 @@ public class Query3 implements IQuery {
         for (int i = 0; i < rddResultGrouped.countByKey().size(); i++) {
 
             int fI = i;
-            JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> rddMonthsStates = rddResultGrouped.filter(x -> x._1().equals(fI));
+            JavaPairRDD<Integer, Iterable<Tuple2<String, Double>>> rddMonthsStates = rddResultGrouped.filter(x -> x._1().equals(fI));
             JavaPairRDD<Double, String> rddMonthsCoefficient = rddMonthsStates.
-                    flatMapToPair((PairFlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Double, String>) input12 -> {
+                    flatMapToPair((PairFlatMapFunction<Tuple2<Integer, Iterable<Tuple2<String, Double>>>, Double, String>) input12 -> {
 
-                        ArrayList<Tuple2<Double, String>> result = new ArrayList<>();
-                        for (Tuple2<Double, String> tuple : input12._2()) {
-                            result.add(tuple);
+                        List<Tuple2<Double, String>> result = new ArrayList<>();
+                        for (Tuple2<String, Double> tuple : input12._2()) {
+                            result.add(new Tuple2<>(tuple._2(), tuple._1()));
                         }
                         return result.iterator();
                     });
@@ -204,13 +186,14 @@ public class Query3 implements IQuery {
             listTopStatesPerMonth.add(new Tuple2<>(fI, top));
         }
 
+
         // Trasformo in RDD la lista
         JavaRDD<Tuple2<Integer, List<Tuple2<Double, String>>>> input2 = sparkContext.parallelize(listTopStatesPerMonth);
 
         // Mappo il precedente RDD in un PairRdd così formato <mese, <coefficienteTrend, nomeStato>>
         JavaPairRDD<Integer, Tuple2<Double, String>> pairRddTopStatesPerMonth = input2.
                 flatMapToPair((PairFlatMapFunction<Tuple2<Integer, List<Tuple2<Double, String>>>, Integer, Tuple2<Double, String>>) row -> {
-                    ArrayList<Tuple2<Integer, Tuple2<Double, String>>> res = new ArrayList<>();
+                    List<Tuple2<Integer, Tuple2<Double, String>>> res = new ArrayList<>();
                     for (Tuple2<Double, String> tuple : row._2()) {
                         res.add(new Tuple2<>(row._1(), tuple));
                     }
@@ -226,15 +209,20 @@ public class Query3 implements IQuery {
 
         long iSparkKmeans = System.currentTimeMillis();
 
+        /**
+         * Start MLib KMeans
+         */
         // Itero per tutti i mesi e applico il KMeans mese per mese
         for (int month = 0; month < rddGoupedStatesPerMonth.keys().collect().size(); month++) {
 
             // Filtro il risultati per il mese corrente che sto valutando
             int finalMonth = month;
+
+            // Aggiungo i coefficienti in un RDD di Vector per darli in pasto al KMeans
             JavaRDD<Vector> filtered = rddGoupedStatesPerMonth
                     .filter(x -> x._1().equals(finalMonth))
                     .flatMap((FlatMapFunction<Tuple2<Integer, Iterable<Tuple2<Double, String>>>, Vector>) input13 -> {
-                        ArrayList<Vector> result = new ArrayList<>();
+                        List<Vector> result = new ArrayList<>();
                         for (Tuple2<Double, String> tuple : input13._2()) {
                             Vector a = Vectors.dense(tuple._1());
                             result.add(a);
@@ -243,7 +231,7 @@ public class Query3 implements IQuery {
                     });
 
 
-            KMeansModel clusters = KMeans.train(filtered.rdd(), NUM_CLUSTERS, NUM_ITERATIONS);
+            KMeansModel clusters = KMeans.train(filtered.rdd(), Config.NUM_CLUSTERS, Config.NUM_ITERATIONS);
 
             System.out.println("*****Training*****");
             int clusterNumber = 0;
@@ -298,13 +286,15 @@ public class Query3 implements IQuery {
         System.out.println("*****Start Naive K-Means*****");
         long iNaiveKmeans = System.currentTimeMillis();
 
-        // Naive K-Means
+        /**
+         * Start Naive KMeans
+         */
         for (int month = 0; month < rddGoupedStatesPerMonth.keys().collect().size(); month++) {
 
             int finalMonth = month;
             JavaPairRDD<Integer, Iterable<Tuple2<Double, String>>> rddMontlyTrends = rddGoupedStatesPerMonth.filter(x -> x._1().equals(finalMonth));
 
-            NaiveKMeans naiveKMeans = new NaiveKMeans(rddMontlyTrends.values(), NUM_CLUSTERS, NUM_ITERATIONS);
+            NaiveKMeans naiveKMeans = new NaiveKMeans(rddMontlyTrends.values(), Config.NUM_CLUSTERS, Config.NUM_ITERATIONS);
             System.out.println("\n*****Prediction for month: " + month + "*****");
 
             System.out.println("*****Training*****");

@@ -24,7 +24,7 @@ public class Query1SparksSQL {
 
     private static String pathToFile = "src/main/resources/dataset1.csv";
 
-    public static void main(String[] args) throws IOException, URISyntaxException {
+    public static void main(String[] args) {
 
 
         long initialTime = System.currentTimeMillis();
@@ -40,7 +40,6 @@ public class Query1SparksSQL {
         SparkSession spark = SparkSession
                 .builder()
                 .appName("Java Spark SQL query1").master("local")
-                //.config("com.afjcjsbx.sabdcovid.spark.some.config.option", "some-value")
                 .getOrCreate();
 
 
@@ -62,9 +61,6 @@ public class Query1SparksSQL {
         df.createOrReplaceTempView("query1");
 
         Dataset<Row> results = spark.sql("SELECT date, cared, swabds FROM query1");
-        //results.createOrReplaceTempView("temp");
-        //Dataset<Row> sqlDF = com.afjcjsbx.sabdcovid.spark.sql("SELECT DISTINCT house_id FROM temp WHERE sum >= 350 ");
-
 
         results.show();
         spark.close();
@@ -81,12 +77,7 @@ public class Query1SparksSQL {
         StructType schema = DataTypes.createStructType(fields);
 
         // Convert records of the RDD to Rows
-        JavaRDD<Row> rowRDD = values.map(new Function<Tuple3<String, Integer, Integer>, Row>() {
-            @Override
-            public Row call(Tuple3<String, Integer, Integer> val) throws Exception {
-                return RowFactory.create(val._1(), val._2(), val._3());
-            }
-        });
+        JavaRDD<Row> rowRDD = values.map((Function<Tuple3<String, Integer, Integer>, Row>) val -> RowFactory.create(val._1(), val._2(), val._3()));
 
         // Apply the schema to the RDD
         Dataset<Row> df = spark.createDataFrame(rowRDD, schema);
