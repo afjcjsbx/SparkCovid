@@ -37,6 +37,14 @@ Finally the results of the executions will be available in the HDFS, in the "res
 By opening the Redis web page, type `redis` in place of localhost, next to the `host` entry.
 Selecting the database ID, with ID = 1 we will go to view the result of query1, with ID = 2 we will go to view the result of query 2, with ID = 3 we will go to view the result of query 3 with Spark MLlib and with ID = 4 we will go to view the result of query 3 with K-means naive.
 
+
+### Run Spark
+For run Spark, open a terminal and type:
+
+```
+sh script/avvoSparkSubmit.sh
+```
+
 ### Kill and remove
 To kill all the containers, type `CTRL + C` on the terminal where the `sudo docker-compose up` command was launched and finally to remove them, run the command
 
