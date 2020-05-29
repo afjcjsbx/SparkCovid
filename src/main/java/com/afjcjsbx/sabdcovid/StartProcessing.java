@@ -47,14 +47,6 @@ public class StartProcessing {
         sparkContext.stop();
         sparkProcessor.close();
 
-        // Una volta terminato il processamento stoppiamo Spark per 24 ore
-        try {
-            TimeUnit.DAYS.sleep(1);
-            System.out.println("**Spark paused for 24 hours from now**");
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
     }
 
